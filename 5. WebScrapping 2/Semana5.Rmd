@@ -1,0 +1,170 @@
+---
+title: "Semana 5"
+author: "Juan Felipe Ladino"
+date: "18 de febrero de 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+- Hoy haremos otro ejemplo sencillo de web scrapping. Con esto terminaremos la revisión de este tema.
+
+- Exploraremos la página `http://es.presidencia.gov.co/discursos` con el fin de extraer los discursos del ex presidente Juan Manuel Santos.
+
+- Exploremos primero un discurso cualquiera:
+```{r}
+#install.packages("rvest")
+library(rvest)
+#instal.packages("stringr")
+library(stringr)
+
+url <- "http://es.presidencia.gov.co/discursos/180806-Alocucion-de-despedida-del-Presidente-Juan-Manuel-Santos"
+```
+
+- Noten que la pagina contiene el texto del discuros, sin embargo, a diferencia de los ejemplos anteriores el discurso no está en tabla, de modo que no podemos usar el comando `html_table`. 
+
+- Mas aun, noten que cada parrafo del discurso se encuentra en un objeto separado. Nuestra mision sera extraer cada parrafo y unirlo para generar un solo discurso.
+
+```{r}
+html <- read_html(url)
+
+link <- html_nodes(html, "#DeltaPlaceHolderMain > div.article > div.ExternalClass913F0F2CEF5744B7A0B39E4FEF74CAD6 p")
+
+text <- html_text(link, "p")
+```
+
+- Ahora tenemos una lista con cada parrafo, no obstante queremos que quede un solo objeto como discurso. La siguiente funcion nos ayuda a lograr esto
+```{r}
+paste_text <- function(list){
+  discurso <- ""
+  for(i in list){
+    discurso <- paste0(discurso, " ", i)
+  }
+  return(discurso)
+}
+```
+
+```{r}
+discurso <- paste_text(text)
+```
+
+- Ya tenemos el discurso en un solo objeto. Explorando otros discursos podemos encontrar que en general todos funcionan de la misma manera. ¿Podemos automatizar este proceso? Volvamos a la pagina `http://es.presidencia.gov.co/discursos`.
+
+- Al explorarla vemos que la pagina tiene varios discursos, intentemos obtenerlos todos en un solo dataframe. 
+
+- Al explorar la pagina, podemos encontrar que hay links para cada discurso.
+```{r}
+url_dis <- "http://es.presidencia.gov.co/discursos"
+html_dis <- read_html(url_dis)
+```
+
+- Ahora extraigamos los links que nos interesan de la pagina
+```{r}
+html_div <- html_nodes(html_dis, "#WebPartWPQ2 div")
+```
+- Como resultados tenemos una lista con varios objetos del tipo `div`.
+
+- Si exploramos la pagina mas a fondo, ninguno de los objetos `div` de la ruta que usamos tiene objetos de tipo `a`, excepto el que contiene los links.
+
+- Asi, intuitivamente si extraemos los objetos tipo `a` solo obtendremos los links
+```{r}
+html_a <- html_nodes(html_div, "a")
+hmlt_links <- html_attr(html_a, "href")
+html_title <- html_text(html_a) #extraer titulo de discurso
+```
+
+- Creemos una funcion que desarrolle esta tarea y me de como resultado un dataframe con dos columnas: link y nombre de discurso
+```{r}
+get_links <- function(url){
+  
+  html_dis <- read_html(url)
+  html_div <- html_nodes(html_dis, "#WebPartWPQ2 div")
+  html_a <- html_nodes(html_div, "a")
+  html_links <- html_attr(html_a, "href")
+  html_title <- html_text(html_a)
+  
+  links <- data.frame(html_links, html_title, stringsAsFactors = FALSE)
+  return(links)
+}
+
+```
+
+```{r}
+data_links <- get_links("http://es.presidencia.gov.co/discursos")
+```
+
+- Ya obtuvimos el link para cada discurso. Previamente logramos extraer el texto y generar un solo discurso. Asi, por cada link podemos extraer su respectivo discurso.
+
+```{r}
+get_discourses <- function(url){
+  
+  data <- get_links(url)
+  data$disc <- NA
+  
+  for(i in 1:nrow(data)){
+    link <- data$html_links[i] 
+    html <- read_html(link)
+    object <- html_nodes(html, "#DeltaPlaceHolderMain > div.article > div.ExternalClass913F0F2CEF5744B7A0B39E4FEF74CAD6 p")
+    text <- html_text(link, "p")
+    
+    discourse <- paste_text(text)
+    data$disc[i] <- discourse
+  }
+  return(data)
+}
+```
+
+- Probemos esto codigo.
+
+- ¿Funciona? ¿ Por que?
+
+- Exploremos nuevamente la pagina. En este caso, revisemos el `css selector` de dos discursos diferentes. ¿Que problema hay?
+
+- En estos casos es mejor usar el `xpath`. Revisemos los mismos dos discursos.
+
+- Noten que a diferencia del `css selector`, el `xpath` no cambia entre las paginas.
+
+- Usemos el `xpath` de cualquier discurso:
+```{r}
+data <- get_links(url_dis)
+link <- data$html_links[6] 
+html <- read_html(link)
+object <- html_nodes(html, xpath = '//*[@id="DeltaPlaceHolderMain"]/div[5]/div[6]')
+```
+- Fijense que al usar el `xpath` no debe fijarse al final el nombre del tag que estamos buscando. De hecho, usar xpath nos genera una lista con los objetos que contiene la ruta. Uno de esos objetos es el texto que estamos buscando.
+```{r}
+text <- html_text(object)
+```
+
+- Ya no requerimos usar la funcion que pega las partes de texto.
+
+- El siguiente codigo tendría en cuenta el `xpath`
+```{r}
+get_discourses <- function(url){
+  
+  data <- get_links(url)
+  data$disc <- NA
+  
+  for(i in 1:nrow(data)){
+    link <- data$html_links[i] 
+    html <- read_html(link)
+    object <- html_nodes(html, xpath = '//*[@id="DeltaPlaceHolderMain"]/div[5]/div[6]')
+    text <- html_text(object)
+    data$disc[i] <- text
+  }
+  return(data)
+}
+```
+
+- Apliquemos la funcion corregida
+```{r}
+discursos <- get_discourses(url_dis)
+```
+
+- Logramos obtener una base que contiene links, titulo del discurso y discurso. En este caso, no obtuvimos los objetos directamente de una tabla, si no que debimos extraerlos uno por uno.
+
+- En siguientes clases aprenderemos como analizar texto como el que acabamos de obtener.

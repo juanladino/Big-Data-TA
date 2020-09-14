@@ -1,0 +1,311 @@
+---
+title: "Lasso, Ridge"
+author: "Juan Felipe Ladino"
+date: "20 de abril de 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Metodos de regresion
+
+- Como vieron en clase, los modelos lineales pueden tener problemas al momento de predecir especialmente cuando hay muchos predictores. Para solucionar este problema aprendieron RIDGE, LASSO
+
+- Hoy revisaremos ejemplos de cada uno
+
+- Por el momento trabajemos en la base que vamos a utilizar
+
+```{r}
+library(tidyverse)
+library(MASS)
+```
+```{r}
+houses <- Boston
+str(houses)
+```
+
+- La base cuenta con 506 observaciones y 14 variables. Todas son numericas (num o int)
+
+- La base cuenta con informacion de casas y su entorno en Boston. La variable de interes en este caso sera `medv`, que es la mediana de valor de las casas
+
+- Dividamos el dataset en train y test
+
+- Recuerden que no deben haber missing values
+
+```{r}
+sum(is.na(houses$medv))
+```
+
+- Y recuerden que primero debemos establecer la matriz de variables explicativas. Para eso usamos la funcion `model.matrix`, y separar la variable dependiente
+
+```{r}
+matrix <- model.matrix(medv ~ ., houses)[, -1]
+y <- houses$medv
+```
+
+- Ahora hagamos la division
+
+```{r}
+set.seed (123)
+train = sample(1:nrow(houses), nrow(houses)/2)
+test = (-train)
+
+y_test= y[test]
+```
+
+- Y leamos los paquetes de interes
+
+```{r}
+#install.packages("glmnet")
+library(glmnet)
+```
+
+### Ridge
+
+- El metodo RIDGE encoge los coeficientes con menor importancia explicativa a un valor cercano a cero
+
+- Dado que el metodo disminuye la varianza, es una buena practica estandarizar la escala de las variables explicativas, de manera que variables explicativas con valores muy altos "por naturaleza" (hectareas de cultivos) no tengan una importancia mayor por su mayor variacion con respecto a otras variables
+
+- El comando `glmnet`, con el cual implementaremos RIDGE automaticamente estandariza las variables, y devuelve el valor de los coeficientes en su forma no estandarizada, de manera que `glmnet` hace este trabajo por nosotros
+
+- La regresion RIDGE se plantea de la siguiente forma:
+
+`glmnet(matrix, y, alpha=0, lambda = NULL)`
+
+- Donde el parametro `alpha` es igual a 0 para hacer RIDGE. El parametro `lambda` es el valor de lambda que escogeremos para la regresion.
+
+- Recuerden que hay un trade-off entre sesgo y varianza, razon por la cual es importante hacer pruebas con varios valores de `lambda` de tal forma que podamos minimizar la varianza sin aumentar significativamente el sesgo
+
+- Correremos multiples modelos con diferentes valores de lambda para este fin
+```{r}
+grid=10^seq(10,-2,length=100)
+```
+
+- Acabamos de crear un vactor con valores para lambda
+
+- Entrenemos el modelo RIDGE
+```{r}
+ridge <- glmnet(matrix[train,], y[train], alpha=0, lambda = grid)
+```
+
+- Ahora grafiquemos los resultados
+```{r}
+plot(ridge, xvar = "lambda")
+```
+
+- Como era de esperarse, a mayores valores de lambda, los coeficientes se acercan cada vez mas a cero
+
+- Pero debemos saber el lambda optimo. Para esto corramos el modelo RIDGE, haciendo la respectiva usamos el comando `cv` antes de `glmnet`
+
+```{r}
+cv_ridge <- cv.glmnet(matrix[train,], y[train], alpha=0)
+```
+
+- Noten que ya no es necesario incluir `lambda`, ya que el cross validation automaticamente verificara para varios valores de lambda
+
+```{r}
+plot(cv_ridge)
+```
+
+- Recuerden que la intuicion de usar varios lambdas es encontrar aquel que minimice el error cuadratico medio, que es tambien el que minimizara el tradeoff entre varianza y sesgo
+
+- El lambda optimo se encuentra de la siguiente forma
+```{r}
+lambda_optimo <- cv_ridge$lambda.min
+lambda_optimo
+```
+
+- Noten que la grafica presenta el lambda en logaritmos, mientras que mediante el codigo anterior obtenemos el valor sin logaritmo
+
+- Recuerden tambien que el logaritmo de 0 no existe, de manera que el valor en la grafica de lambda cuando es igual a 0 corresponde al error cuadratico medio de la regresion por OLS
+
+- Ya sabiendo el valor optimo de lambda, obtengamos los coeficientes optimos
+```{r}
+op_ridge <- glmnet(matrix[train,], y[train], alpha=0, lambda = lambda_optimo)
+coef(op_ridge)
+```
+
+- Con el modelo optimo, hagamos las predicciones para la base de prueba
+```{r}
+predictions <- predict(op_ridge, matrix[test,])
+```
+
+```{r}
+#install.packages("caret")
+library(caret)
+RMSE(predictions, y_test)
+```
+
+- Obtenemos el valor RMSE
+
+### Lasso
+
+- El modelo LASSO tiene la misma funcion intuitiva que RIDGE en el sentido de que hala hacia cero los coeficientes de las variables explicativas menos importantes. La diferencia radica en que LASSO si convierte en cero los coeficientes de las variables menos importantes
+
+- En ese sentido, LASSO es un modelo que tambien es utilizado para seleccion de variables. Es decir, de mi set X de variables, cuales son realmente importantes para explicar Y
+
+- Cuando es util usar RIDGE o LASSO?
+
+    1. RIDGE: Si la variable a predecir depende de muchas variables. Otra forma de decirlo es cuando la variable Y depende de variables X que tienen coeficientes similares entre si
+    2. LASSO: Si depende de pocas variables y queremos definir cuales son esas variables explicativas. Otra forma de decirlo es cuando algunos predictores tienen coeficientes muy altos y los demas coeficientes muy bajos
+    
+- Usaremos la misma base para correr LASSO, para implementarlo usamos la misma funcion `glmnet`, cambiando `alpha` igual a 1. De manera que el proceso es paralelo
+
+```{r}
+lasso <- glmnet(matrix[train,], y[train], alpha=1, lambda = grid)
+```
+
+- Grafiquemos los resultados
+```{r}
+plot(lasso, xvar = "lambda")
+```
+
+- En este caso los coeficientes si pueden ser iguales a 0
+
+- Encontremos lambda optimo
+
+```{r}
+cv_lasso <- cv.glmnet(matrix[train,], y[train], alpha=1)
+```
+
+- Noten que ya no es necesario incluir `lambda`, ya que el cross validation automaticamente verificara para varios valores de lambda
+
+```{r}
+plot(cv_lasso)
+```
+
+- lambda optimo
+```{r}
+lambda_optimo <- cv_lasso$lambda.min
+lambda_optimo
+```
+
+- Ya sabiendo el valor optimo de lambda, obtengamos los coeficientes optimos
+```{r}
+op_lasso <- glmnet(matrix[train,], y[train], alpha=0, lambda = lambda_optimo)
+coef(op_lasso)
+```
+
+- Noten que ningun coeficiente se convirtio en 0
+
+- Con el modelo optimo, hagamos las predicciones para la base de prueba
+```{r}
+predictions_lasso <- predict(op_lasso, matrix[test,])
+```
+
+```{r}
+#install.packages("caret")
+library(caret)
+RMSE(predictions_lasso, y_test)
+```
+
+- Obtenemos el valor RMSE
+
+## Regression trees
+
+- Otro de los modelos que han visto en clase son los arboles de regresion. Se diferencian de los modelos de arboles que han usado en que, en lugar de usar una regla de mayoria para clasificar, se utiliza el promedio de los valores de los objetos
+
+- Especificamente, en cada nodo terminal, se corre un modelo de regresion multiple usando las observaciones de ese nodo
+
+- Los arboles de regresion dividen de acuerdo con la caracteristica que tenga la mayor pureza, es decir, aquella que maximice la reducción en la desviacion estandar
+
+- Los arboles de regresion pueden ser preferidos que los modelos de regresion en las siguientes circunstancias:
+
+    1. No linealidades en variables
+    2. Muchos predictores
+
+- Nuevamente, su decision del modelo debe estar justificada, por que en su respectivo caso de estudio es mejor los arboles de regresion que lineal, ridge o lasso?
+
+- Implementemos con la misma base los arboles de regresion
+
+- Primero observemos como se comporta la distribucion de nuestra variable de interes
+```{r}
+hist(houses$medv)
+```
+
+- Aunque esta un poco inclinada hacia la izquierda, se comporta considerablemente normal
+
+- Noten que para las regresisones RIDGE y LASSO, dividimos nuestras bases de prueba y entrenamiento a la mitad. No obstante, los arboles de regresion requieren muchos datos de entrenamiento, de manera que una distribucion de este estilo no seria adecuada
+
+- Usemos una division de 80/20
+```{r}
+set.seed(123)
+train_sample <- sample(nrow(houses), nrow(houses)*0.8)
+```
+
+```{r}
+house_train <- houses[train_sample,]
+house_test <- houses[-train_sample,]
+```
+
+- Leamos el paquete que nos permitira implementar el arbol de regresion
+```{r}
+#install.packages("rpart")
+library(rpart)
+```
+
+- Entrenemos el modelo
+```{r}
+model_train <- rpart(medv ~ ., data = houses)
+model_train
+```
+
+- Grafiquemos los resultados
+
+```{r}
+#install.packages("rpart.plot")
+library(rpart.plot)
+rpart.plot(model_train)
+```
+
+- Noten que cada nodo muestra el porcentaje de la muestra que fue dividido en cada rama
+
+- Noten ademas que la particion usa solamente 4 variables (rm, lstat, dis, crim) a pesar de que tenemos 14 variables. Esto resulta en 8 nodos temrinales ¿Que sucedio?
+
+- El algoritmo de `rpart` utiliza internamente metodos de cross validation para calcular el costo asociado a incluir un nodo terminal adicional. De manera que el numero de nodos terminales pueda minimizer el RMSE con el menor costo posible
+
+```{r}
+plotcp(model_train)
+```
+
+- En la grafica, el eje y es el error de cross validation, el eje x de abajo es el costo relativo, y el eje x de arriba es el numero de nodos terminales. Noten que entre mayor sea el costo mayor es el error de cross validation
+
+- Noten tambien que la linea punteada se encuentra con la linea continua en 6 nodos terminales. Podriamos mejorar el modelo para que solo incluya los 6 nodos terminales "optimos" sin embargo, es de esperarse que los resultados con 8 o 6 nodos terminales sean parecidos
+
+- Lo que hace rpart es tunear el modelo para que obtengamos la mejor version. Podriamos agregar caracteristicas adicionales para mejorarlo mas (eso se los dejo a ustedes)
+
+- Pero por que menos nodos terminales es mejor si un mayor costo me da un mayor error?
+
+- Grafiquemos la evolucion del arbol completo, si se utilizaran todas as variables
+```{r}
+completo <- rpart(medv ~ .,data = houses,  control = list(cp = 0))
+plotcp(completo)
+```
+
+- Si usaramos todas las variables podriamos llegar a un total de 41 nodos terminales
+
+- Sin embargo, noten tambien que a un costo considerablemente pequeño, manteniendo el error de cross validation bajo, obtenemos un arbol mas intuitivo ("optimo")
+
+- Usar rpart establece este optimo en 8 nodos terminales
+
+- Continuemos con el modelo y obtengamos las predicciones
+```{r}
+arbol_predict <- predict(model_train, house_test) 
+```
+
+- Para corroborar el desempeno del modelo, usaremos el error absoluto medio (MAE)
+
+- Creemos una funcion para calcularlo
+```{r}
+MAE <- function(actual, predicted){
+  mean(abs(actual-predicted))
+}
+```
+
+- Apliquemos la funcion
+```{r}
+MAE(house_test$medv, arbol_predict)
+```
+

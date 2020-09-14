@@ -1,0 +1,204 @@
+---
+title: "Semana 4"
+author: "Juan Felipe Ladino"
+date: "10 de febrero de 2020"
+output: html_document
+---
+
+## Web Scrapping
+
+- Vamos a explorar la pagina web de `https://www.colombia.com/elecciones/2015/regionales/` la cual contiene los resultados de las elecciones regionales del 2015.
+
+- Los resultados estan desagregados por tipo de eleccion y por ciudad. Para cada tipo de eleccion y ciudad encontramos que llos resultados estan desagregados por candidato.
+
+- Utilicemos la herramienta de `Herramienta de desarrollador` usando `ctrl + shift + i`. Esta herramienta nos permite explorar el codigo fuente de paginas web.
+
+- Al explorar el codigo fuente, podemos encontrar que los datos se encuentran en una tabla. `<table> ... </table>` es un tag que define la forma en la que los datos estan incluidos en la pagina. En este caso estan guardados como una tabla (no siempre sera tan facil)
+
+- Nuestra meta será extraer los datos en la tabla con los siguientes paquetes
+```{r}
+#install.packages("rvest")
+library(rvest)
+#instal.packages("stringr")
+library(stringr)
+```
+
+- Asignamos la url de interes a una variable
+```{r}
+url <- "https://www.colombia.com/elecciones/2015/regionales/resultados/alcaldia.aspx?C=AL&D=16&M=1"
+```
+
+- Ahora exploramos el contenido de la pagina
+```{r}
+html <- read_html(url) #obtiene datos de url
+```
+
+- Si exploramos la variable `html` nos damos cuenta que aunque tenemos el contenido de la pagina, no es muy intuitivo para extraer informacion.
+
+- El paquete nos ofrece funciones para navegar y extraer elementos del modelo de la pagina. Por ejemplo, tenemos la función `html_table` que nos permite recuperar todas las tablas.
+```{r}
+tablas <- html_table(html, fill = TRUE)
+tablas
+```
+
+- Noten que el objeto `tables`  es una lista, donde cada objeto de la lista es una tabla que estaba contenida en el codigo fuente de la url. Nos interesa la tabla 3.
+```{r}
+resultados_bog <- data.frame(tablas[[3]], stringsAsFactors = FALSE)
+```
+
+- Podemos limpiar estos datos:
+```{r}
+resultados_bog <- resultados_bog[,-c(2,5,7)] #eliminamos columnas vacias
+resultados_bog <- resultados_bog[1:10, ] #eliminamos filas que no son de candidatos
+colnames(resultados_bog) <- c("cod_candidato", "candidato", "votos", "porc_votos")
+resultados_bog <- resultados_bog[-1,]
+```
+
+- Con esto ya tenemos nuestra tabla extraida de una pagina web.
+
+- Pero una pregunta adicional surge, como podemos extraer esto para todos los departamentos y municipios? comparemos el url para bogota y para medellin:
+```{r}
+url_bog <- "https://www.colombia.com/elecciones/2015/regionales/resultados/alcaldia.aspx?C=AL&D=16&M=1"
+url_med <- "https://www.colombia.com/elecciones/2015/regionales/resultados/alcaldia.aspx?C=AL&D=1&M=1"
+```
+
+- Noten que al final de ambos url aparece la siguiente cadena de texto, `C=AL&D=16&M=1` o `C=AL&D=1&M=1`. 
+
+- Noten que ambas cambian en el primer numero. Si hacen este comparativo para varios departamentos y municipios entenderan que `D=` corresponde a un numero de departamento, `M=` a numero de municipio. Si exploramos otros tipos de eleccion encontramos que `C=` corresponde al tipo de eleccion (gobernacion, jal, etc).
+
+- Intuitivamente, podemos pensar que hay forma de automatizar la extraccion de datos para todos los municipios en todos los departamentos.
+
+- Noten que al explorar la lista de departamentos nos damos cuenta que el codigo tiene contenidos los links de cada departamento. Hagamos el ejercicio de extraerlos:
+```{r}
+links_depto <- html_nodes(html, "#dropdown_departamentos li") #usar copy selector y el tag (li)
+links_depto
+```
+
+- Noten que el componente `href=` contiene el link para cada departamento. Nuestro objetivo es extraer este link. Noten ademas que dentro del nodo `li` hay uno mas `a`
+```{r}
+links_depto <- html_nodes(links_depto, "a")
+links_depto
+```
+
+- Ahora debemos extraer el link y los textos para asociar a cada link su respectivo departamento:
+```{r}
+links <- html_attr(links_depto, "href")
+links
+```
+
+```{r}
+depto_nombres <- html_text(links_depto)
+depto_nombres
+```
+
+- Armemos un dataframe para ejemplificar. Ya tenemos la info organizada.
+```{r}
+webscrap <- data.frame(depto_nombres, links, stringsAsFactors = FALSE)
+```
+
+- Noten que ahora podemos hacer una funcion para entrar a cada link de cada departamento. Una vez entramos a cada departamento los links de cada municipio quedan disponibles, usemos el caso de antioquia para extraer sus municipios.
+
+```{r}
+url_ant <- webscrap[4, 2]
+url_ant <- paste0("https://www.colombia.com", url_ant) #pega cadenas de texto
+html_ant <- read_html(url_ant)
+links_muni <- html_nodes(html_ant, "#dropdown_municipios li") #usar copy selector y el tag (li)
+links_muni <- html_nodes(links_muni, "a") #usar copy selector y el tag (li)
+nom_muni <- html_text(links_muni)
+links_muni <- html_attr(links_muni, "href")
+```
+
+- Ya tenemos los links para los municipios de antioquia. Hay muchas formas de hacer esto. Por el momento, limpiemos la memoria y hagamos el siguiente ejercicio
+```{r}
+rm(list = ls())
+```
+
+1. Una funcion que me permita extraer todos los links de todos los municipios.
+
+```{r}
+extraer_links_depto <- function(url){ #el argumento sera el link base
+  html <- read_html(url)
+  links <- html_nodes(html, "#dropdown_departamentos li") #usar copy selector y el tag (li)
+  links <- html_nodes(links, "a")
+  nombres <- html_text(links)
+  links <- html_attr(links, "href")
+  data <- data.frame(nombres, links, stringsAsFactors = FALSE)
+  data$links <- lapply(data$links, function(x) paste0("https://www.colombia.com", x))
+
+  return(data)
+} 
+
+extraer_links_muni <- function(data, links, nombres){ #el argumento sera del dataframe que construimos y los nombres de las columnas
+  
+  nombres <- list() #creamos lista de nombres vacia
+  link_muni <- list() #creamos lista de links vacia
+  
+  for(link in data$links){
+    
+    print(paste0("Extrayendo municipios de", " ", data$nombres[data$links == link]))
+    html <- read_html(link)
+    links_muni <- html_nodes(html, "#dropdown_municipios li")
+    links_muni <- html_nodes(links_muni, "a")
+    nombres_muni <- html_text(links_muni)
+    links_muni <- html_attr(links_muni, "href")
+    #pegamos datos a las listas vacias
+    nombres <- append(nombres, nombres_muni) #al usar append quedan como si fueran columnas, debo volverlas filas
+    link_muni <- append(link_muni, links_muni)
+  }
+  data_muni <- data.frame(unlist(nombres), unlist(link_muni), stringsAsFactors = FALSE) #para volverlas listas de filas usamos unlist
+  colnames(data_muni) <- c("nombres","link_muni")
+  data_muni$link_muni <- lapply(data_muni$link_muni, function(x) paste0("https://www.colombia.com", x))
+ 
+  return(data_muni)
+} 
+```
+
+- Probemos las funciones:
+
+```{r}
+departamentos <- extraer_links_depto("https://www.colombia.com/elecciones/2015/regionales/resultados/alcaldia.aspx?C=AL&D=16&M=1") #seleccionamos un link cualquiera de depto
+```
+
+```{r}
+municipios <- extraer_links_muni(departamentos, links, nombres)
+```
+
+2. Luego, haremos una funcion que me permita extraer de cada link de municipio los resultados de la alcaldia.
+
+```{r}
+extraer_datos_alcaldia <- function(data, link_muni, nombres){ #extraer la info de resultados de alcaldia en cada municipio
+  resultados_data <- data.frame() #dataframe vacio
+
+  for(muni in data$link_muni){
+    
+    print(paste0("Extrayendo municipios", " ", data$nombres[data$link_muni == muni]))
+    html <- read_html(muni)
+    tablas <- html_table(html, fill = TRUE)
+    if(length(tablas) >= 3){
+      resultados <- data.frame(tablas[[3]], stringsAsFactors = FALSE)
+      resultados$municipio <- data$nombres[data$link_muni == muni]
+
+    } else {
+      resultados <- data.frame()
+    }
+    resultados_data <- rbind(resultados_data, resultados)
+  }
+  return(resultados_data)
+}
+```
+
+- Probremos nuestra funcion
+```{r}
+datos <- extraer_datos_alcaldia(municipios[1:50,], links, nombres)
+```
+
+
+### Ejercicio (deben descargar el codigo en su computador)
+
+1. Terminen de correr el codigo de municipios (si quieren modificarlo) y limpien la base para eliminar columnas que sobren y filas como las de voto en blanco y resumen de resultados. Agreguen una columna adicional que sea el tipo de eleccion (alcaldia).
+
+2. Exploren y obtengan los mismos resultados que obtuvimos en el ejemplo pero para las elecciones 2019: `https://www.colombia.com/elecciones/2019/regionales/resultados/`
+
+3. Aumenten el codigo para 2015 o 2019 de tal manera que incluya una forma que extraiga los datos de alcaldia, gobernacion, consejo y jal.
+
+3. Exploren la pagina: `https://es.wikipedia.org/wiki/Anexo:Pa%C3%ADses_por_porcentaje_de_poblaci%C3%B3n_debajo_de_la_l%C3%ADnea_de_pobreza`. Extraigan la tabla "Población viviendo por debajo de 2 y 1 dolar de (PPA) por día (%)".

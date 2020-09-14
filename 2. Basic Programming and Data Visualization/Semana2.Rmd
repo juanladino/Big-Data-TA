@@ -1,0 +1,540 @@
+---
+title: "Semana 2 - Programación Básica 1"
+author: "Juan Felipe Ladino"
+date: "28 de enero de 2020"
+output: html_document
+---
+
+## Programación Básica en R 
+
+- En comparación con otros paquetes como Stata, R tiene un costo de entrada relativamente mayor.
+
+- Sin embargo, este costo se cubre rápidamente debido a la versatilidad del programa para diversos procesos.
+
+- Programación es un campo en el que R se desempeña relativamente bien. Sin embargo al hablar de programación se abre un universo de trabajo.
+
+-Introduciremos algunos aspectos básicos de programación en R
+
+- Lectores interesados en aprender a programar (en forma) pueden remitirse al libro de Matloff (2011), "The Art of R Programming".
+
+### Condicionales
+
+- Los condicionales son expresiones que realizan alguna tarea de computación dependiendo en si la condición establecida es verdadera (TRUE) o falsa (FALSE)
+
+- S�?mbolos condicionales
+
+`<`
+`>`
+`==`
+`>=`
+`<=`
+
+- El condicional principal es el `if()`, el cual realiza un tarea basada en una condición simple.
+
+- La estructura para un condicional `if()` es la siguiente:
+
+`if(condition){`
+
+`expresion verdadera`
+
+`} else{`
+
+`expresion falsa`
+
+`}`
+
+- Noten que un condicionales tiene tres componentes: el condicional, una expresión verdadera y una falsa.
+
+- Si la condición se cumple, desarrollará el código en la expresión verdadera, de lo contrario, desarrollará el código de la expresión falsa.
+
+- Veamos un ejemplo:
+
+```{r}
+x <- 0.9 
+
+if(x > 0.5){
+  print(x)
+  print("Es cara")
+} else {
+  print(x)
+  print("Es sello")
+}
+```
+
+- Noten ahora el resultado cuando no se cumple la condición.
+
+```{r}
+x <- 0.49 
+
+if(x > 0.5){
+  print(x)
+  print("Es cara")
+} else {
+  print(x)
+  print("Es sello")
+}
+```
+
+- R por defecto solo necesita la condición verdadera para funcionar, de manera que no siempre es necesario establecer una condición falsa.
+
+```{r}
+x <- 0.49 
+
+if(x > 0.5){
+  print(x)
+  print("Es cara")
+} else {}
+```
+
+- Se puede considerar más de dos opciones verdaderas incluyendo `else if()` el la estructura del condicional.
+
+```{r}
+x <- runif(1) #runif(n) me genera un vector de tamaño n de números aleatorios entre 0 y 1
+
+if(x > 0.5){
+  print(x)
+  x <- x + 0.1 #x se está sobre escribiendo para tomar un valor nuevo
+  print(x)
+} else if(x == 0.5) {
+  print(x)
+  x <- x + 0.2
+  print(x)
+} else{
+  x
+}
+```
+
+- En el código anterior estamos adicionando una condición, y esto puede repetirse con n condiciones más incluyendo  `else if()`.
+
+- R entenderá que el condicional terminó con `else`
+
+- Nota: Estamos aprendiendo algo adicional, puedo sobre escribir variables.
+
+- En `x <- x + 1` estamos usando la x inicial para crear un nuevo valor de x.
+
+```{r}
+x <- 5
+x
+```
+```{r}
+x <- x + 5
+x
+```
+
+- Tengan esto en cuenta para más adelante.
+
+- El condicional `if()` se puede aplicar para cualquier expresión lógica, sin importar el tipo de dato. 
+
+- En el ejemplo anterior usamos números, usemos ahora otro tipo de dato.
+
+```{r}
+texto <- "Big Data"
+
+if(is.character(texto) == TRUE ){
+  print(texto)
+} else{
+  print("Mi variable no es de tipo texto")
+}
+```
+
+```{r}
+texto <- FALSE
+
+if(is.character(texto) == TRUE ){ #is.character(var) es una función que me regresa TRUE si var es tipo character y FALSE en caso contrario
+  print(texto)
+} else{
+  print("Mi variable no es de tipo texto")
+}
+```
+
+- Noten que las opciones para establecer un condicional son (casi) infinitas. A medida que avancemos esto tomará más sentido.
+
+- Noten también que en los ejemplos anteriores usamos varias funciones como `runif()` o `is.character()` para definir los condicionales.
+
+- Es muy probable que al imaginarse una condición exista una función que les ayude, es responsabilidad de ustedes buscar la función que necesiten en cada caso.
+
+### Iteraciones y loops
+
+- Un loop es una forma de repetir un secuencia de instrucciones bajo ciertas condiciones.
+
+- Permite automatizar partes de un código que necesitan repetición. 
+
+- Existen múltiples funciones para desarrollar un loop, pero las más comunes (y prácticas) son `for()` y `while()`.
+
+- Empecemos por la función `for()`. La sintaxis es la siguiente:
+
+`for(expresion){`
+
+  `tarea a desarrollar`
+
+`}`
+
+```{r}
+x <- c(5, 12, 13)
+
+for (n in x)
+
+  print(n^2)
+```
+
+- Acá le pedimos que a cada elemento del vector le saque el cuadrado. Noten que n toma cada valor del vector.
+
+- Noten que el `for()` se puede leer como: para cada objeto n del vector x realiza la tarea definida.
+
+- Noten además que estamos yendo objeto por objeto. Podemos hacerlo con la posición:
+
+```{r}
+x <- c(5, 12, 13)
+
+for (i in 1:length(x)){ #lenght(x) me genera un número que es igual al largo del vector x
+  print(x[i]^2)
+}
+```
+
+- En el código anterior, en vez de cada n del vector x, tendremos que la función de generará para cada posición i del vector x.
+
+- Además, podemos combinar un loop con un condicional:
+
+```{r}
+nombre_sujeto <- c("James", "Radamel", "David")
+numero_goles <- c(109, 249, 0)
+juega_francia <- c(FALSE, TRUE, FALSE)
+posicion <- factor(c("volante", "delantero", "arquero"))
+gravedad_lesion <- factor(c("severa", "moderada", "leve"), levels = c("leve", "moderada", "severa"), ordered=TRUE)
+
+jugadores_seleccion <- data.frame(nombre_sujeto, numero_goles, posicion, juega_francia, gravedad_lesion, stringsAsFactors=FALSE)
+```
+
+
+```{r}
+for (n in jugadores_seleccion$numero_goles){ 
+  
+  if(n %% 2){
+    print(n)
+  } else{
+    print("número de goles no es par")
+  }
+}
+```
+
+- Otras declaraciones interesantes, con las que podemos generar loops, son `while()` 
+
+- Por ejemplo, consideremos el siguiente loop:
+
+```{r}
+i <- 1
+while (i<=10){ 
+  i <- i+4
+  i
+}
+```
+
+- Primero establecimos `i` igual 1.
+
+- Y dijimos que siempre que i sea menor o igual a 10, se convierta en `i+4`.
+
+- El ciclo llega hasta `i=9`, que se convierte en 13 y se detiene.
+
+### Funciones
+
+- Como en la mayorÍa de lenguajes de programación, el corazÓn de programar son las funciones.
+
+- Una función es un grupo de instrucciones que toma insumos, los usa para computar otros valores y devuelve un resultado.
+
+- La t�?pica función tiene la siguiente estructura:
+
+
+`function.name <- function(arguments)`
+
+`{`
+
+`computations on the arguments`
+
+`some other code`
+
+`}`
+
+
+
+- As�?, las funciones suelen tener un nombre.
+
+- Los argumentos usados como insumos.
+
+- Un cuerpo, que es el código dentro de los corchetes {}. Es donde llevamos a cabo los cálculos.
+
+- Y uno o más valores retornados.
+
+- Empecemos con una función simple que nos devuelva el cuadrado de cualquier número:
+
+```{r}
+funcion_cuadrado <- function(n)
+{
+  u=n*n
+  return(u)
+}
+```
+
+```{r}
+funcion_cuadrado(5)
+```
+
+- Listo: hemos programado nuestra primera función.
+
+- Observen que n es un parámetro de la función
+
+- Naturalmente, no ten�?amos que definirla porque R ya le tiene incorporada: `n^2`
+
+- Probemos con una función más compleja.Una que nos permita contar el número de elementos impares que tiene un vector.
+
+- Para ello, primero conozcamos el operador módulo `%%`.
+
+- Este operador devuelve el residuo de la división de dos números. Por ejemplo:
+
+```{r}
+38 %% 7
+```
+
+- Porque 7 cabe 5 veces en 38, y sobran 3. O por ejemplo,
+
+```{r}
+100 %% 5
+```
+
+- Porque 100 es un múltiplo de 5.
+
+- Entendiendo este operador podemos programar la función que cuente el número de impares en un vector.Porque un impar es un número que al dividirse por 2 deja un residuo de 1:
+
+```{r}
+55 %% 2
+```
+
+- As�??, nuestra funciÃ³n es:
+
+```{r}
+numeroimpares <- function(x)
+{
+  k <- 0
+  for (n in x) 
+  {
+    if (n %% 2 ==1) k <- k+1
+  }
+  return(k)
+}
+```
+
+- Vamos paso a paso:
+
+- Primero, le dimos un nombre a la función.
+
+- Establecimos que el insumo de la función es un vector llamado `x`.
+
+- Luego abrimos el cuerpo del c�digo.
+
+- Este empieza estableciendo un escalar `k` en 0.
+
+- Luego le pedimos que para cada elemento `n` del vector `x`, en orden desde el primero hasta el �ltimo, se use el operador mÃ³dulo.
+
+- Si el resultado es 1, se le agrega una unidad al valor de `k` que venimos arrastrando.
+
+- Probemos la función con el vector `c(5, 6, 7, 8)`. En este caso, el vector tiene 2 impares.
+
+```{r}
+a <- c(5, 6, 7, 8)
+numeroimpares(a)
+```
+
+### Visualizaci�n `ggplot2` 
+  
+- R tiene sus propias funciones incorporadas para hacer gráficas.
+
+- Pero el paquete `ggplot2` es mucho más poderoso.
+
+- Trabajaremos con la base `landdata-states.csv` que está en la carpeta de esta semana.
+
+- Esta es una base sobre precios de la vivienda en USA.
+
+```{r}
+housing <- read.csv("landdata-states.csv") 
+```
+
+- Inspeccionemos la base:
+
+```{r}
+str(housing)
+```
+
+- Otra forma de ver los datos es por medio del comando head:
+
+```{r}
+head(housing) 
+```
+
+- Tenemos variables interesantes como el estado, el valor, la regi�n, la antiguedad, entre otras.
+
+- Las gr�ficas nos ayudan a entender estos datos.
+
+- Empecemos con un histograma en `ggplot2`:
+
+```{r}
+#install.packages("ggplot2")
+library(ggplot2)
+```
+
+```{r}
+ggplot(housing, aes(x = Home.Value)) + geom_histogram()
+```
+
+- Noten que la sintaxis de `ggplot2` toma como primer argumento la base de datos, luego con `aes` el valor del eje, y luego incluye un t�rmino que define el tipo de gr�fico.
+
+- Veamos esto con una gráfica de la serie de tiempo del valor de las casas.
+
+- Veamos como ser�?a en `ggplot2`.
+
+```{r}
+ggplot(subset(housing, State %in% c("MA", "TX")), aes(x=Date, y=Home.Value, color=State)) + geom_point()
+```
+
+### Mapeo estético
+
+- En `ggplot2` por estético entendemos lo que podemos ver.
+
+- Por ejemplo, posición, color, relleno, forma, tipo de l�?nea, tamaño.
+
+- Cada objeto geométrico acepta solo un subconjunto de opciones estéticas.
+
+- El mapeo estético se establece con la función `aes()`.
+
+### Objetos geométricos
+
+- Los objetos geométricos son las marcas que ponemos en una gráfica. Por ejemplo:
+
+     - Puntos (`geom_point`)
+     - L�?neas (`geom_line`)
+     - Boxplots (`geom_boxplot`)
+
+- Una gráfica debe tener al menos un `geom`. Puede tener más de uno.
+
+- Con el operador `+` se pueden añadir más `geom`.
+
+- Para un listado de todos los objetos geométricos disponibles usar:
+
+```{r}
+help.search("geom_", package="ggplot2")
+```
+
+- Veamos algunos ejemplos
+
+### Puntos (Scatterplot)
+
+- Con la funcion `aes` y los objetos geométricos podemos hacer gráficas en `ggplot2`.
+
+- Como m�?nimo necesitamos mapear $x$ y $y$. Luego hay algunas opciones:
+
+```{r}
+ggplot(housing, aes(y=Land.Value, x=Home.Value, col="red")) + geom_point()
+```
+
+- Tenemos demasiadas observaciones como para ver algo claro.
+
+- Acotemos el análisis únicamente al primer trimestre de 2002
+
+```{r}
+housing2002Q1 <- subset(housing, Date==2002.25)
+```
+ 
+ - Y construyamos el scatterplot solo para este periodo:
+ 
+```{r}
+ggplot(housing2002Q1, aes(y=Land.Value, x=Home.Value, col="red")) + geom_point()
+```
+
+- Mucho más claro.
+
+- Podemos hacer transformaciones a variables y graficarlas:
+
+```{r}
+ggplot(housing2002Q1, aes(y=Land.Value, x=log(Home.Value), col="red")) + geom_point()
+```
+
+### Lineas (linea de prediccion)
+
+- Podemos tener más de un objeto geométrico en una misma gráfica.
+
+- Por ejemplo, podemos graficar la recta de regresión a la gráfica que ya tenemos.
+
+- Primero, corramos la regresión de `Land.Value` contra `Home.Value` y pronostiquemos:
+
+```{r}
+housing2002Q1$pred.LV <- predict(lm(Land.Value ~ log(Home.Value), data = housing2002Q1))
+```
+
+- Definamos el plano:
+
+```{r}
+p1 <- ggplot(housing2002Q1, aes(x=log(Home.Value), y=Land.Value))
+```
+
+- Grafiquemos en dicho plano las observaciones y la recta de regresión
+
+```{r}
+p1 + geom_point()+geom_line(aes(y=pred.LV))
+```
+
+- Hay otro tipo de ajustes m�s sofisticados (no-parametricos):
+
+```{r}
+p1 + geom_point(aes(color=Land.Value)) + geom_smooth()
+```
+
+### Texto (Label Points)
+
+- Cada `geom` permite algunos mapeos particulares.
+
+- Por ejemplo, `geom_text` acepta `labels`.
+
+```{r}
+p1+geom_text(aes(label=State))
+```
+
+- El tama�o de los labels no nos ayuda mucho en este caso.
+
+```{r}
+p1+geom_text(aes(label=State), size=1.5)
+```
+
+### Barras
+
+- Es f�cil hacer gr�ficas de barras:
+
+```{r}
+ggplot(housing, aes(factor(region)))+geom_bar()
+```
+
+- Le podemos poner algo de color:
+
+```{r}
+ggplot(housing, aes(factor(region))) + geom_bar(fill="darkgreen")
+```
+
+- Hay otra función, `qplot`, que es útil para este tipo de gráficas. 
+
+- La sintaxis es distinta:
+
+```{r}
+qplot(region, data=housing, geom="bar")
+```
+
+- Esta funci�n es m�s intuitiva para ciertas variantes.
+
+- Por ejemplo, si queremos ver la media de `Home.Value` por regi�n.
+
+```{r}
+qplot(region, data=housing, geom="bar", weight=Home.Value, ylab="Home.Value")
+```
+
+- Y le podemos poner un poco de color:
+
+```{r}
+qplot(region, data=housing, geom="bar", weight=Home.Value, ylab="Home.Value", fill=region)
+```
+

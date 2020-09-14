@@ -1,0 +1,238 @@
+---
+title: "Network analysis"
+output: html_notebook
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+- En un amplio rango de campos el analisis de redes se ha vuelto un aspecto importante. Un ejemplo es el comercio (redes comerciales). Las redes permiten entender las relaciones actores alrededor de una tematica en particular
+
+- Hoy trabajaremos en los aspectos basicos para graficar redes. En siguientes clases revisaremos temas de caracter mas teorico para hacer un analisis mas profundo de estas estructuras de datos
+
+- Revisaremos varios paquetes que nos permiten aproximarnos al analisis de redes de manera grafica
+
+-Lo primero es que una red esta formada por nodos y aristas
+
+- Los nodos son los objetos que seran conectados o que hacen parte del sistema.
+
+- Las aristas son lo que conecta a los nodos
+
+- En terminos de comercio por ejemplo, los nodos son los paises, mientras que las aristan son si un pais pais exporta a otro
+
+- Asuman que tenemos a Colombia, Bolivia y Peru: esos son nuestros nodos
+
+- Asuman que Colombia comercia con Peru y Bolivia, pero Bolivia y Perú no comercian entre ellos: aquí, hay aristas entre Colombia y Peru, y entre Colombia y Bolivia, pero no entre Peru y Bolivia
+
+- Ambos objetos son fundamentales para graficar una red en R. Por lo general, necesitaremos de ambos para poder hacer uso de los paquetes querevisaremos hoy
+
+- La funcion `tibble` crea una estructura de datos similar al data frame. 
+
+```{r}
+library(tidyverse)
+edge_list <- tibble(from = c(1, 2, 2, 3, 4), to = c(2, 3, 4, 2, 1))
+node_list <- tibble(id = 1:4)
+
+edge_list
+node_list
+```
+
+- Note que el objeto node_list nos muestra los objeetos de la red, mientras que edge_list, nos muestra las conexiones de los nodos
+
+- En terminos generales esto es lo que buscaremos tener siempre que trabajemos con redes: tener una base de datos con los nodos unicos y una base con todas las conexiones
+
+- Revisemos una base de datos de verdad
+
+```{r}
+library(readxl)
+letters <- read_excel("correspondence-data-1585.xlsx")
+letters
+```
+
+- La base de datos es de mensajes enviados desde un punto x a un punto y. En este caso, las cartes van desde el lugar en la columna "source" hasta la columna "destination"
+
+- Nuestra tarea es obtener los valores unicos entre "source" y "destination", que seran los nodos de nuestra red
+
+```{r}
+sources <- letters %>%
+  distinct(source) %>%
+  rename(label = source)
+
+sources
+```
+
+- Usando la funcion `distinct` obtenemos una columna con los valores unicos de la columna "source" de la base de datos "letters"
+
+- Tenemos 9 filas, de manera que la columna "source" tenia 9 nodos unicos
+
+- Hagamos lo mismo con la columnda "destination"
+```{r}
+destinations <- letters %>%
+  distinct(destination) %>%
+  rename(label = destination)
+
+destinations
+```
+
+- Ahora debemos unir ambas base de manera que tengamos una base con todos los nodos unicos. La funcion `full_join` une "sources" y "destination" por la variable "label", que es una variable que tienen ambas bases. Esto implica que unira por nodos comunes, de manera que la base resultante tendra todos los nodos unicos
+
+```{r}
+nodes <- full_join(sources, destinations, by = "label")
+
+nodes
+```
+
+- Crearemos una columna "id" para identificar numericamente cada nodo. Usamos la funcion `rowid_to_column` 
+
+```{r}
+nodes <- nodes %>% rowid_to_column("id")
+
+nodes
+```
+
+- Concentremonos ahora en las aristas. Lo primero a considerar es que hay conexiones que pueden repetirse en la base de datos original.
+
+- Por ejemplo, el nodo1 puede estar conectado con el nodo2 x numero de veces. Entre mas veces aparezcan, mas importante seran para la red
+
+- Para tener en cuenta este aspecto, por lo general se crea una variable de "peso", que indique la importancia de cada arista
+
+```{r}
+per_route <- letters %>%  
+  group_by(source, destination) %>%
+  summarise(weight = n()) %>% 
+  ungroup()
+
+per_route
+```
+
+- Mediante el codigo anterior obtenemos una variable del numero de veces que se repite cada arista.
+
+- Ahora asociemos a cada nombre en "source" su respectivo "id" de acuerdo a como lo definimos en los nodos
+
+```{r}
+edges <- per_route %>% 
+  left_join(nodes, by = c("source" = "label")) %>% 
+  rename(from = id)
+
+edges
+```
+
+- Hagamos lo mismo para "destination"
+
+```{r}
+edges <- edges %>% 
+  left_join(nodes, by = c("destination" = "label")) %>% 
+  rename(to = id)
+
+edges
+```
+
+- En este caso solo nos interesan los id, ya que los nombren estan incluidos en la variables de nodos, de manera que limpiaremos la base de aristas quitando los nombres y dejando los "id". 
+
+- Adicionalmente, ubiquemos en primero el origen y destino de las aristas
+```{r}
+edges <- select(edges, from, to, weight)
+
+edges
+```
+
+- Implementemos nuestro primer paquete
+
+```{r}
+#install.packages("network")
+library(network)
+```
+
+- El objeto "routes_network" tiene creado un objeto tipo "network". Los principales inputs son la base de edges y en la opcion "vertex.attr" la base de nodos. Esta opcion se refiere a los atributos de la base de aristas, que en este caso son los nodos
+```{r}
+routes_network <- network(edges, vertex.attr = nodes, matrix.type = "edgelist", ignore.eval = FALSE)
+
+routes_network
+```
+
+- Noten del output anteior la opcion "directed = TRUE". 
+
+- Las redes pueden ser dirigidas o no dirigidas. Por ejemplo, si Colombia exporta a Peru, hay una arista con direccion a Peru. Pero solo estara direccionada hacia Colombia si Peru tambien exporta a Colombia
+
+- Noten en la siguiente grafica esta nocion con mas claridad
+```{r}
+plot(routes_network, vertex.cex = 3)
+```
+
+- Noten tambien que hay aristas en negrilla. Por la forma en la que organizamos los datos, el codigo entiende que la ultima columna correspodne al peso de cada conexion. Entre mas negrilla, mayor es el peso
+
+- Dibujemos la misma grafica de diferente forma
+```{r}
+plot(routes_network, vertex.cex = 3, mode = "circle")
+```
+
+- Note que la opcion "mode" permite cambiar la forma en la que se obtiene la grafica
+
+- Usemos el paquete "igraph"
+```{r}
+detach(package:network)
+rm(routes_network)
+#install.packages("igraph")
+library(igraph)
+```
+
+- El paquete nos permite mejorar las formas de graficar redes. Usando la funcion `graph_from_data_frame` podemos obtener un objeto para graficar. Note que los atributos de la funcion toman la base de aristas, nodos y especifican que la red es dirigida ("directed = TRUE")
+```{r}
+routes_igraph <- graph_from_data_frame(d = edges, vertices = nodes, directed = TRUE)
+```
+
+```{r}
+plot(routes_igraph, edge.arrow.size = 0.3)
+```
+
+- Usemos la opcion "layout" para cambiar la forma de presentar la red
+```{r}
+#seed
+plot(routes_igraph, layout = layout_with_graphopt, edge.arrow.size = 0.5)
+```
+
+- Usemos un paquete mas
+```{r}
+#install.packages("tidygraph")
+library(tidygraph)
+#install.packages("ggraph")
+library(ggraph)
+```
+
+- Como en los casos anteriores, creemos un objeto que contenga los nodos y aristas para construir la red. Usemos la funcion `tbl_graph` 
+
+- La sintaxis es mas clara que en los casos anteriores:
+```{r}
+routes_tidy <- tbl_graph(nodes = nodes, edges = edges, directed = TRUE)
+routes_tidy
+```
+
+- `ggraph` es una variacion de ggplot2 pero para redes. Esta nos permite una amplia gama de opciones para visualizar estos datos. Ir mas a fondo de la funcion se los dejo a ustedes. 
+
+```{r}
+ggraph(routes_tidy) + geom_edge_link() + geom_node_point() + theme_graph()
+```
+
+- Mejoremos el output de la grafica
+```{r}
+ggraph(routes_tidy, layout = "graphopt") + 
+  geom_node_point() +
+  geom_edge_link(aes(width = weight), alpha = 0.8) + 
+  scale_edge_width(range = c(0.2, 2)) +
+  geom_node_text(aes(label = label), repel = TRUE) +
+  labs(edge_width = "Letters") +
+  theme_graph()
+```
+
+- Noten que agrgando mas opciones podemos mejorar la forma en la que se ve y se entiende la grafica.
+
+```{r}
+ggraph(routes_igraph, layout = "linear") + 
+  geom_edge_arc(aes(width = weight), alpha = 0.8) + 
+  scale_edge_width(range = c(0.2, 2)) +
+  geom_node_text(aes(label = label)) +
+  labs(edge_width = "Letters") +
+  theme_graph()
+```
+

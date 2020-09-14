@@ -1,0 +1,330 @@
+---
+title: "Intro_TextAnalysis"
+author: "Juan Felipe Ladino"
+date: "24 de marzo de 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Introduccion a Analisis de Textos
+
+- Hasta el momento hemos aprendido a trabajar con datos numericos, que una vez estructurados permiten analisis estadistico de manera inmediata. 
+
+- Si bien nuestra profesion nos lleva a trabajar mayoritariamente con datos numericos, hay una realidad y es que una proporcion mayoritaria de los datos se encuentran en formato de texto.
+
+- Aqui nos introduciremos al analisis de texto, esto incluye el pre procesamiento que permita usar al texto para analisis estadistic, asi como las limitaciones y cuidados que deben tenerse.
+
+- Esto nos permitira entrenar con aplicaciones mas avanzadas en las monitorias siguientes.
+
+- De cualquier forma, aplicaremos todo lo aprendido hasta este momento.
+
+- Empecemos creando una variable de texto
+```{r}
+parrafo <- "Muchos años después, frente al pelotón de fusilamiento, el coronel
+Aureliano Buendía había de recordar aquella tarde remota en que su
+padre lo llevó a conocer el hielo. Macondo era entonces una aldea de
+veinte casas de barro y cañabrava construidas a la orilla de un río de
+aguas diafanas que se precipitaban por un lecho de piedras pulidas,
+blancas y enormes como huevos prehistóricos. El mundo era tan
+reciente, que muchas cosas carecían de nombre, y para mencionarlas
+había que señalarlas con el dedo. Todos los años, por el mes de
+marzo, una familia de gitanos desarrapados plantaba su carpa cerca
+de la aldea, y con un grande alboroto de pitos y timbales daban a
+conocer los nuevos inventos. Primero llevaron el iman. Un gitano
+corpulento de barba montaraz y manos de gorrión, que se presentó
+con el nombre de Melquíades, hizo una truculenta demostración
+pública de lo que él mismo llamaba la octava maravilla de los sabios
+alquimistas de Macedonia. "
+```
+
+- El parrafo es del libro Cien Años de Soledad de Gabriel Garcia Marques
+
+- El texto tiene diferentes partes: 
+
+- Lo primero es el corpus. El corpus corresponde a un set de textos no estructurados. Llamaremos no estructurado a que no este ordenado de forma tal que permita su analisis, esto tendra sentido mas adelante.
+
+- El corpus entonces pueden ser varios parrafos de cien años de soledad.
+
+- En este caso solo tenemos uno, asi que ese sera nuestro corpus.
+
+- Cada corpus esta compuesto por palabras, que en este caso llamaremos tokens. 
+
+- POR LO GENERAL, los paquetes de analisis de texto de r estan programados para el idioma ingles, si bien hay paquetes que permiten analisis en español, en este caso supondremos que haremos un analisis en ingles
+
+- En ese orden de idea, el primer paso que nos gustaria es limpiar el texto de caracteres que no estan en el ingles: tildes o la letra ñ
+
+- Primero probemos las estructura del texto e imprimamoslo completo
+```{r}
+str(parrafo)
+parrafo
+```
+
+- Fijense que solo en la primera linea, ya hay varias tildes que nos gustaria eliminar, empecemos por limpiar estos caracteres
+
+- Para esto, aprenderemos algo llamado expresiones regulares. Estas expresiones me permiten identificar cadenas de texto especificos del texto para realizar programacion unicamente sobre la cadena definida
+
+- Es decir, hay una forma de especificar unicamente las letras con tilde, para cambiarlas por la misma sin tilde. Para esto sirven las expresiones regulares
+
+- El paquete que nos permitira estas operaciones es el siguiente
+```{r}
+#install.packages("stringr")
+library(stringr)
+```
+
+- Recuerden instalar primero
+
+- El paquete `stringr` me permite identificar patrones y realizar operaciones sobre esos patrones por medio de expresiones regulares
+
+- Usemos algunas funciones
+
+```{r}
+str_extract(parrafo, "Aureliano")
+str_extract(parrafo, "aureliano")
+```
+
+- La funcion `str_extract` me permite extraer las cadenas de texto que cumplen un patron. El primer argumento es el corpus y el segundo es el patron
+
+- Noten que los patrones mas basicos son aquellos que cumplen exactamente con una palabra. El patron "Aureliano" me resultao en que me imprima las palabras que cumplan el patron, es decir, la misma palabra
+
+- Noten tambien que las funciones son sensibles a las mayusculas y minusculas, para el codig oes diferente "aureliano" que "Aurelliano"
+
+- Lo primero para rescatar es que una buena practica es convertir todo el corpus a minusculas (o mayusculas) para mantener todo en el mismo formato
+
+- Observen el siguiente ejemplo
+```{r}
+str_extract(parrafo, "El")
+str_extract(parrafo, "el")
+```
+
+- Noten que es diferente "El" a "el", aunque en escencia son lo mismo. Convirtamos todo el texto a minusculas
+
+```{r}
+parrafo_minusc <- tolower(parrafo)
+parrafo_minusc
+```
+
+- El objeto parrafo_minusc ya tiene todos sus caracteres en minusculas. Para esto sirve la funcion `tolower`, para convertir a mayuscula usamos `toupper`
+
+```{r}
+parrafo_mayusc <- toupper(parrafo)
+parrafo_mayusc
+```
+
+- De momento trabajemos con la version en minusculas. 
+
+```{r}
+str_extract(parrafo_minusc, "El")
+str_extract(parrafo_minusc, "el")
+str_extract(parrafo_minusc, "él")
+```
+
+- Noten que ya no esta "El", porque lo convertimos en "el", pero sigue estando "él"
+
+- Reemplacemos ahora estas letras con tildes, ara esto usaremos la funcion `str_replace`
+```{r}
+parrafo_minusc <- str_replace_all(parrafo_minusc, "é", "e")
+```
+
+- Asignamos nuevamente la variable parrafo_minusc para reemplazar "é" por "e"
+
+- La funcion  `str_replace_all` nos permite reemplazar cadenas de texto. El primer argumento es la variable, el segundo la cadena de texto a reemplazar, y el tercero por que vamos a reemplazar esa cadena de texto. La funcion `str_replace` realiza la misma operacion pero solo para la primera ocurrencia.
+
+```{r}
+str_extract(parrafo_minusc, "él")
+str_extract(parrafo_minusc, "el")
+```
+
+- Noten que ya no existe "él", sino "el" por el reemplazo de "e" por "e". Hagamos lo mismo para las demas vocales
+
+```{r}
+parrafo_minusc <- str_replace_all(parrafo_minusc, "á", "a")
+parrafo_minusc <- str_replace_all(parrafo_minusc, "í", "i")
+parrafo_minusc <- str_replace_all(parrafo_minusc, "ó", "o")
+parrafo_minusc <- str_replace_all(parrafo_minusc, "ú", "u")
+```
+
+- Queremos hacer limpiezas adicionales sobre el corpus, y es que no haya parrafos separados, sino que todo sea un texto de seguido
+
+```{r}
+parrafo_minusc
+```
+
+- Note que hay unos caracteres de la forma `\n`. Esto representa una nueva linea, eliminemos estos caracteres
+
+```{r}
+parrafo_minusc <- str_replace_all(parrafo_minusc, "\n", " ")
+parrafo_minusc
+```
+- Noten que estamos reemplazando `\n` por " ", que representa un espacio, si hubieramos reemplazado por "" las palabras separadas por `\n`  hubieran quedado pegadas, y no queremos eso.
+
+- Ahora eliminemos puntuacion. Noten que la puntuacion puede ser "," ";" "." ":" "()" "{}" y demas caracteres. Aunque este texto es corto y podemos saber que puntuacion hay, en textos mas largos puede que no sepamos que tantos signos de puntuacion hay
+
+- En estos casos es funcional usar una expresion que corresponda a cualquier signo de puntuacion
+```{r}
+parrafo_minusc <- str_replace_all(parrafo_minusc, "[:punct:]", "")
+parrafo_minusc
+```
+
+- Hay funciones predeterminadas que me seleccionan todos los caracteres que cumplen con una caracteristica. la expresion `[:puntc:]` considera todos los signos puntuacion considerados en el ingles.
+
+- Estas expresiones predeterminadas se incluyen de la forma "[:funcion_predeterminada:]", donde funcion_predeterminada puede ser:
+
+- alpha (que representa letras), lower (minusculas), upper (mayusculas), digits (digitos) y mas. 
+
+- Con esta funcion eliminamos todos los signos de puntuacion si señalarlos explicitamente
+
+- El proceso anterior nos permite tener un texto considerablemente limpio. Sin embargo, todavia requiere trabajo.
+
+- Hasta este momento hemos usado patrones del texto para realizar parte de la limpieza para el analisis. Aqui les dejare unos links con funciones del paquete `stringr` que les pueden ser de utilidad
+
+- Igualmente, los links contienen expresiones regulares (patrones) para identificar otro tipo de textos. Veremos varios ejemplos en la siguiente monitoria, pero por favor revisenlos para tener un idea
+
+-  `https://stringr.tidyverse.org/articles/regular-expressions.html`
+- `http://edrub.in/CheatSheets/cheatSheetStringr.pdf`
+
+
+- Una forma de analizar texto consiste en organizar de forma "tidy". Es decir, que cada token sea una fila de una base de datos. 
+
+- Usemos el paquete `tokenizers` 
+
+```{r}
+#install.packages("tokenizers")
+library(tokenizers)
+```
+
+- Usemos la funcion `tokenize_words`
+
+```{r}
+parrafo_token <- tokenize_words(parrafo_minusc)
+parrafo_token <- data.frame(parrafo_token)
+colnames(parrafo_token) <- "Tokens"
+```
+
+- La funcion `tokenize_words` convierte un objeto tipo character en una lista de tokens. Luego la transformamos en data fram y cambiamos el nombre de la columna
+
+- Con esto ya tenemos un texto en formato tidy. De manera que es mas facil analizarlo
+
+- No obstante hace falta un paso, y es que dependiendo del contexto, quisieramos eliminar palabras comunes al español
+
+- Por ejemplo, pronombres como yo, tu, el, o preposiciones como a, ante, bajo, con, contra ... pueden no generar informacion de importancia. 
+
+- Un paso adicional que por lo general se realiza en analisis de textos es elimnar estas palabras, que llamaremos stopwords.
+
+- Para eliminar estas palabras usaremos dos paquetes `stopwords` y `tidyverse`
+
+```{r}
+#install.packages("stopwords")
+library(stopwords)
+#install.packages("tidyverse")
+library(tidyverse)
+```
+
+- Del paquete `stopwords` obtenemos stopwords en ingles, pero las necesitamos en español
+```{r}
+stop <- stopwords("es", source = "snowball")
+stop
+```
+
+- Noten que tenemos una lista amplia, primero quitemos las tildes
+
+```{r}
+stop <- str_replace_all(stop, "á", "a")
+stop <- str_replace_all(stop, "é", "e")
+stop <- str_replace_all(stop, "í", "i")
+stop <- str_replace_all(stop, "ó", "o")
+stop <- str_replace_all(stop, "ú", "u")
+stop
+```
+
+- Noten ademas que las funciones del paquete `stringr` son aplicables a vectores que contengan datos tipo texto
+
+- Ya tenemos las stopword en español, ahora queremos quedarnos con todo menos las stopwords. Observen la siguiente seccion de codio
+```{r}
+parrafo_token_ns <- parrafo_token %>%
+  filter(!Tokens %in% stop)
+```
+
+- Descompongamos el codigo de arriba
+
+- Lo primero para resaltar es el uso del operador `%>%`. El paquete `tidyverse` me permite usar %>% para darle continuidad al codigo. 
+
+```{r}
+parrafo_token %>%
+  filter(!Tokens %in% stop)
+```
+
+- el codigo de arriba y de abajo son equivalentes, por que usear el operador `%>%` entonces? Porque me permite hacer operaciones sobre una base de datos de manera continua, sin necesidad de crear constantemente nuevas variables. Volveremos a esto en un momento
+
+```{r}
+filter(parrafo_token, !Tokens %in% stop)
+```
+
+- Lo siguiente para resaltar el la funcion `filter`, que me permite filtrar una base de datos de acuerdo a condiciones.
+
+- Noten que si no uso el operador `%>%`, el primer alrgumento de filter es la base de datos, y el segundo la operacion de condicion. 
+
+- Al usar el operador no debo mendionar nuevamente la base de datos, ya que R entiende que estoy filtrando sobre esa base.
+
+- En ese orden de ideas el operador `%>%` permite hacer operaciones sobre el objeto especificado antes de este.
+
+- El tercer tema para resaltar es el uso del condicional `%in%`. En escencia, representa un condicional para saber que de un conjunto A se encuentra en un conjunto B. 
+
+- A %in% B va a ser igual a TRUE para los objetos de A que esten en B
+
+- El uso del operador `!` quiere decir negacion. !A %in% B va a ser igual a TRUE para todos los objetos para los cuales A %>% B sea TRUE
+
+- Del codigo de arriba piensen que queremos quedarnos con todo lo que no sea stop words
+
+- Una vez filtrada la base ya podemos hacer analisis con ella. El operador `%>%` presenta una ventaja para esta situacion, ya que no nos obliga a crear multiples copias de un objeto 
+
+```{r}
+parrafo_token %>%
+  filter(!Tokens %in% stop) %>%
+  group_by(Tokens) %>%
+  count(Tokens)
+```
+
+
+- El operador `%>%` me permite continuar haciendo operaciones anidadas. La funcion `group_by` toma como argumento una columna del dataframe, para agregar los datos de acuerdo con los valores que toma la variable, no obstante, la funcion entiende que primero se filtro con `filter`. La funcion `count` me genera una variable que me cuenta las veces que se repite un valor de una variable. Como antes teniamos los datos agregado por la columna "Tokens", "count(Tokens)" contara cuantas veces se repite cada valor unico de Tokens
+
+- Es decir, tendremos la frecuencia de cada Token en la base
+
+- Usemos un operador mas
+
+```{r}
+parrafo_token %>%
+  filter(!Tokens %in% stop) %>%
+  group_by(Tokens) %>%
+  count(Tokens) %>%
+  ggplot(aes(Tokens, n)) + geom_col() + coord_flip()
+```
+
+- No es muy claro, sigamos usando operadores
+```{r}
+parrafo_token %>%
+  filter(!Tokens %in% stop) %>%
+  group_by(Tokens) %>%
+  count(Tokens) %>%
+  filter(n > 1) %>%
+  ggplot(aes(Tokens, n)) + geom_col() + coord_flip()
+```
+
+- Asi podriamos seguir aplicando operaciones a la base de datos.
+
+- Lo importante es que una vez el texto esta en formato "tidy" podemos empezar a desarrollar el analisis.
+
+- Hasta ahora aprendimos lo basico para analizar un texto: limpiarlo con expresiones regulares, convertirlo a tokens, eliminar las stopwords y realizar operaciones sobre los tokens
+
+- En las siguientes clase haremos analisis mas avanzados
+
+- Identificaremos patrones mas complejos y trabajaremos sobre una base de textos mas amplia
+
+- Por el momento es suficiente para que se vayan relacionando con el tema
+
+- Recuerden revisar los siguientes links:
+
+-  `https://stringr.tidyverse.org/articles/regular-expressions.html`
+- `http://edrub.in/CheatSheets/cheatSheetStringr.pdf`

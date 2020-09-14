@@ -1,0 +1,136 @@
+---
+title: "Semana 3"
+author: "Juan Felipe Ladino"
+date: "4 de febrero de 2020"
+output: html_document
+---
+
+## KNN
+
+```{r}
+iris_df <- data.frame(iris)
+```
+
+```{r}
+head(iris_df)
+```
+
+```{r}
+str(iris_df)
+```
+
+- Exploremos la variables `Species`.
+
+```{r}
+table(iris_df$Species)
+```
+
+```{r}
+prop.table(table(iris_df$Species))
+```
+```{r}
+round(prop.table(table(iris_df$Species)), digits = 1)
+```
+```{r}
+round(prop.table(table(iris_df$Species))*100, digits = 1)
+```
+
+- Las tablas son diferentes formas de explorar la variable categorica. En este caso les mostré varias versiones, según su gusto o el contexto en el que estén usandola.
+
+- Noten que las categorías están balanceadas. Esto es importante porque si hay alguna categoría con muchas observaciones, existirá un sesgo a que el algoritmo clasifique con la categoría de la mayoría.
+
+- Ahora revisemos las demás variables
+```{r}
+summary(iris_df[-1])
+```
+
+- Fijense que las variables no están estandarizadas o normalizadas. El algoritmo de Knn requiere que las variables estén en la misma escala de manera que el siguiente paso es encargarnos de esto.
+
+- En el ejemplo con Jorge vieron una función para estandarizarlas min-max las variables.
+```{r}
+estandar <- function(x)
+{
+return((x-min(x))/ (max(x)-min(x)))
+}
+```
+
+- También podemos hacer una función para normalizarlas.
+```{r}
+normalize <- function(x)
+{ 
+return((x - mean(x))/sd(x))
+}
+```
+
+- Apliquemos la función `normalize` que acabamos de crear
+```{r}
+norm_iris <- as.data.frame(lapply(iris_df[1:4], normalize))
+```
+
+-Exploremos la nueva base de datos.
+```{r}
+summary(norm_iris)
+```
+
+- Noten que normalizamos todo menos la variable de interés, que no aparece en el nuevo data frame. Recuerden que esta variable se debe tener separada para la implementación del algoritmo de KNN
+
+- Ahora separaremos la nueva base de datos entre base de entrenamiento y base de prueba. Lo haremos de forma aleatoria.
+```{r}
+random <- sample(1:nrow(norm_iris), 0.8*nrow(norm_iris)) #en un datafraframe lenght() me cuenta las colummas, pero necesitamos las filas para separar las bases
+random
+```
+
+- La función `sample()` me resulta en una lista de valores aleatorios entre 1 y el tamaño que yo desee darle, en este caso el número de filas de nuestra base. El primer argumento es el listado de numeros entre los que puede seleccionar, el segundo es la cantidad de números.
+
+- El listado me indicará el número de las filas que quedaron selecionados como base de entrenamiento. De usar sample tenemos que será el 80% de la base. 
+```{r}
+iris_train <- norm_iris[random,]
+```
+
+- El restante debe ser la base de prueba.
+```{r}
+iris_test <- norm_iris[-random,]
+```
+
+- Para ambas bases debemos extraer una base que sea la variable de clasificación
+```{r}
+iris_train_class <- iris_df[random, 5]
+iris_test_class <- iris_df[-random, 5]
+```
+
+- Instalamos (si no lo hemos hecho antes) y leemos en R el paquete `class` para implementar el algoritmo de KNN.
+```{r}
+#install.packages("class")
+library(class)
+```
+
+- Implementemos el algoritmo KNN.
+`knn(train = base entrenamiento, test = base prueba, cl = columna de clasificador de entrenamiento, k = numero de vecinos)`
+```{r}
+prediction <- knn(train = iris_train, test = iris_test, cl = iris_train_class, k = sqrt(nrow(iris_train)))
+```
+
+- Pensemos lo que hace el algoritmo:
+
+1. Toma la base de entrenamiento para ubicar las observaciones en el espacio de todas las caracteristicas. Por el clasificador, el algoritmo ya sabe la clasificacion de cada observacion de entrenamiento.
+
+2. Ubica cada observacion de prueba en el espacio, encuentra sus k vecinos mas cercanos y asigna una clasificacion de acuerdo con la clasificacion de la mayoria de sus vecinos.
+
+- Podemos ver mas opciones de knn con el comando `?knn`
+
+- Ahora comparemos los valores de prediccion de la base de prueba con los valores reales
+```{r}
+#install.packages("gmodels")
+library(gmodels)
+CrossTable(x=prediction, y=iris_test_class, prop.chisq=FALSE)
+```
+
+- Repitamos el ejercicio con un k diferente.
+```{r}
+prediction2 <- knn(train = iris_train, test = iris_test, cl = iris_train_class, k = 4)
+```
+
+```{r}
+CrossTable(x=prediction2, y=iris_test_class, prop.chisq=FALSE)
+```
+

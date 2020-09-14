@@ -1,0 +1,280 @@
+---
+title: "Semana6"
+author: "Juan Felipe Ladino"
+date: "3 de marzo de 2020"
+output: html_document
+---
+
+## Algunos algoritmos de machine learning
+- Los siguientes modelos de machine learning son Naive Bayes, Arboles de Decisión y Random Forest. Al igual que KNN, estos algoritmos sirven para clasificar eventos con base en sus caracteristicas.
+
+- Naive Bayes establece la categoría a partir de la probabilidad dadas las caracte´risticas o predictores de una observacion.
+
+- Los arboles de decisión definen condiciones a partir de las cuales se puede llegar de manera intuitiva a un resulta de clasificacion.
+
+- Los random forest utilizan varios
+
+- En el ejercicio de hoy utilizaremos la misma base para clasificar si una persona no hara default en el pago de un credito.
+
+```{r}
+library(readxl)
+default <- read_excel("C:/Users/juanf/Desktop/2020-1/BigData-UR-2020-1/Semana 6 - Naive Bayes, DT, Random Forest/default of credit card clients.xls")
+```
+
+```{r}
+str(default)
+```
+
+- Noten que la estructura de la base parece un dataframe pero no lo es. Esta estructura (tibble) no la estudiaremos. Básicamente, es otra forma de representar datos de manera estructurada. Queda para ustedes entender como funciona. Para fin de la clase, trabajemos con dataframes
+```{r}
+default <- as.data.frame(default)
+```
+
+- Podemos convertir en factores la variables que toman valores discretos, incluyendo nuestra variable de interes:
+
+```{r}
+default$`default payment next month` <- as.factor(default$`default payment next month`)
+default$SEX <- as.factor(default$SEX)
+default$EDUCATION <- as.factor(default$EDUCATION)
+default$MARRIAGE <- as.factor(default$MARRIAGE)
+```
+- Primera tarea, automaticen el codigo de arriba.
+
+- Exploremos nuevamente la estructura de la base:
+```{r}
+str(default)
+```
+
+```{r}
+plot(as.factor(default[, 3]))
+```
+
+```{r}
+plot(as.factor(default[default$`default payment next month` == 1, 3]))
+```
+
+```{r}
+plot(as.factor(default[default$`default payment next month` == 0, 3]))
+```
+
+```{r}
+set.seed(123)
+```
+
+```{r}
+default <- default[,-1]
+```
+
+```{r}
+train_sample <- sample(30000,30000*0.8 )
+train_sample[1:100]
+```
+
+```{r}
+default_train <- default[train_sample, ]
+default_test <- default[-train_sample, ]
+```
+
+```{r}
+default_train_labels <- default_train$`default payment next month`
+```
+
+```{r}
+default_test_labels <- default_test$`default payment next month`
+```
+
+```{r}
+default_train <- default_train[,-24]
+default_test <- default_test[,-24]
+```
+
+### Naive Bayes
+
+- Naive bayes requiere que todas las variables esten definidas como categorias. En ese sentido, hacen falta variables que debemos categorizar. 
+
+- La forma de hacer este proceso depende del conocimiento de los datos, deben explorar su distribucion o definir una categorizacion con base en algun criterio. Para fines de este ejemplo utilizaremos la media. 
+
+- Se definira como 1 a una observacion que esta por encima de la media de la variable. Asi se generan valores de 1 y 0 a partir de la condicion de ser mayor a la media. Una vez categorizada la pueden usar en el analisis.
+
+```{r}
+default_nb <- default
+default_nb$PAY_AMT1 <- as.factor(ifelse(default_nb$PAY_AMT1 >= mean(default_nb$PAY_AMT1), 1, 0))
+default_nb$PAY_AMT2 <- as.factor(ifelse(default_nb$PAY_AMT2 >= mean(default_nb$PAY_AMT2), 1, 0))
+default_nb$PAY_AMT3 <- as.factor(ifelse(default_nb$PAY_AMT3 >= mean(default_nb$PAY_AMT3), 1, 0))
+default_nb$PAY_AMT4 <- as.factor(ifelse(default_nb$PAY_AMT4 >= mean(default_nb$PAY_AMT4), 1, 0))
+default_nb$PAY_AMT5 <- as.factor(ifelse(default_nb$PAY_AMT5 >= mean(default_nb$PAY_AMT5), 1, 0))
+default_nb$PAY_AMT6 <- as.factor(ifelse(default_nb$PAY_AMT6 >= mean(default_nb$PAY_AMT6), 1, 0))
+default_nb$BILL_AMT1 <- as.factor(ifelse(default_nb$BILL_AMT1 >= mean(default_nb$BILL_AMT1), 1, 0))
+default_nb$BILL_AMT2 <- as.factor(ifelse(default_nb$BILL_AMT2 >= mean(default_nb$BILL_AMT2), 1, 0))
+default_nb$BILL_AMT3 <- as.factor(ifelse(default_nb$BILL_AMT3 >= mean(default_nb$BILL_AMT3), 1, 0))
+default_nb$BILL_AMT4 <- as.factor(ifelse(default_nb$BILL_AMT4 >= mean(default_nb$BILL_AMT4), 1, 0))
+default_nb$BILL_AMT5 <- as.factor(ifelse(default_nb$BILL_AMT5 >= mean(default_nb$BILL_AMT5), 1, 0))
+default_nb$BILL_AMT6 <- as.factor(ifelse(default_nb$BILL_AMT6 >= mean(default_nb$BILL_AMT6), 1, 0))
+default_nb$LIMIT_BAL <- as.factor(ifelse(default_nb$LIMIT_BAL >= mean(default_nb$LIMIT_BAL), 1, 0))
+default_nb$AGE <- as.factor(ifelse(default_nb$AGE >= mean(default_nb$AGE), 1, 0))
+```
+
+- Tarea, automaticen la categorizacion. 
+
+- Para los dias de pago definiremos como 1 si la variable es mayor a 0:
+```{r}
+default_nb$PAY_0 <- as.factor(ifelse(default_nb$PAY_0 > 0, 1, 0))
+default_nb$PAY_2 <- as.factor(ifelse(default_nb$PAY_2 > 0, 1, 0))
+default_nb$PAY_3 <- as.factor(ifelse(default_nb$PAY_3 > 0, 1, 0))
+default_nb$PAY_4 <- as.factor(ifelse(default_nb$PAY_4 > 0, 1, 0))
+default_nb$PAY_5 <- as.factor(ifelse(default_nb$PAY_5 > 0, 1, 0))
+default_nb$PAY_6 <- as.factor(ifelse(default_nb$PAY_6 > 0, 1, 0))
+```
+
+- Una vez con todas las variables categorizadas, podemos continuar con la implementacion del Naive Bayes.
+
+- Con la nueva base definimos el train y test (los labels no han cambiado)
+
+```{r}
+default_train_nb <- default_nb[train_sample, ]
+default_test_nb <- default_nb[-train_sample, ]
+```
+
+
+```{r}
+#install.packages("e1071")
+library(e1071)
+```
+
+```{r}
+nb_classifier <- naiveBayes(default_train_nb, default_train_labels)
+```
+
+```{r}
+nb_test_pred <- predict(nb_classifier, default_test_nb)
+```
+
+```{r}
+library(gmodels)
+```
+
+```{r}
+CrossTable(nb_test_pred, default_test_labels, prop.chisq=FALSE, 
+prop.r=FALSE, prop.c=FALSE, dnn=c('predicted', 'actual'))
+```
+
+### Decision Trees
+
+- Los arboles de decision pueden hacer prediccion con base en datos categoricos y numericos. En ese sentido, a diferencia del Naive Bayes, el algoritmo de arboles de decision puede explotar valores continuos de las variables y encontrar el corte optimo a partir del cual tomar una decision. 
+
+- Ademas, son mas intuitivos en la forma en la que brindan informacion. 
+
+- Una desventaja del modelo sin embargo es que es facil subestimar o sobre estimar los resultados.
+
+- Piensen que la inclusión de una variable puede generarme una rama adicional que cambie la clasificacion de una observacion.
+
+- Ademas, la exclusion de una variable relevante puede generarme predicciones erroneas.
+
+- En ese orden de ideas, los arboles de decision requieren el ajuste de parametros que optimicen el nivel de prediccion.
+
+```{r}
+#inatall.packages("C50")
+library(C50)
+```
+
+```{r}
+default_model <- C5.0(default_train, default_train_labels)
+```
+- El codigo anterior ya ha creado el arbol de decision, exploremoslo
+
+```{r}
+default_model
+```
+
+- El algoritmo toma 10 decisiones para finalmente clasificar cada observacion.
+
+```{r}
+summary(default_model)
+```
+
+- Noten que la principal variable de clasificacion es el pago inicial.
+
+- Noten tambien que por defecto, el arbol no utiliza varias de las variables incluidas en la base de datos. 
+
+- Noten que se clasificaron 17800 observaciones de la clase 0 y 1969 de la clase 1. Eso quiere decir que tenemos una presicion de 82% aproximadamente. No obstante esta no es la prediccion de la base de prueba.
+
+- Analicemos la prediccion:
+
+```{r}
+dt_pred <- predict(default_model, default_test)
+```
+```{r}
+library(gmodels)
+```
+```{r}
+CrossTable(default_test_labels, dt_pred, prop.chisq=FALSE, prop.c=FALSE, prop.r=FALSE, dnn=c("default real", 'default pronosticado'))
+```
+
+- Del total de observaciones, se clasificaron correctamente aproximadamente el 80%. 
+
+- El 14% corresponde a falsos positivos y el 5 % a falsos negativos. ¿Qué es peor en este caso?
+
+## Random Forest
+
+- El modelo de random forest promedia el resultado de arboles de decision aleatorios. 
+
+- En términos estadisticos, esto permite disminuir el sesgo por alta varianza. De manera que el random forest es menos propenso a cambios por inclusión o explusion de variables.
+
+- Piensen que al aleatorizar por n arboles de decision, donde n es un numero muy grande, en promedio, todas las variables tenderan a equilibrarse, de manera que el modelo se ajustara a la alta varianza de tener los datos en un solo momento.
+
+- Implementemos el algoritmo:
+
+```{r}
+#install.packages("randomForest")
+library(randomForest)
+```
+
+```{r}
+default_bag <- randomForest(x= default_train, y= default_train_labels, importance=TRUE, mtyr = 10)
+```
+
+- La opcion importance nos permite calcular la importancia de cada variable incluida en el modelo y la opcion mtry el numero de arboles a estimar. La incluimos por defecto en este caso
+
+- Este algoritmo es intensivo computacionalmente, asegurense de que su equipo resiste la estimacion de todos los arboles que requieran (especialmente cuando establecen un numero muy grande).
+
+```{r}
+default_bag
+```
+
+- Analicemos la tasa de error del random forest con base en el out of bag error. 
+```{r}
+plot(default_bag, main = "Error Rates")
+```
+
+- Exploremos la importancia de las variables de manera grafica
+```{r}
+varImpPlot(default_bag, sort = TRUE, main="Variables Importance",type=2, n.var=10)
+```
+
+- Encontremos las predicciones
+```{r}
+rf_pred <- predict(default_bag, default_test)
+```
+
+```{r}
+CrossTable(default_test_labels, rf_pred, prop.chisq=FALSE, prop.c=FALSE, prop.r=FALSE, dnn=c("real", 'pronostico'))
+```
+- Recuerden que cada modelo se ajusta a una situacion en particular, cada uno tiene sus ventajas y desventajas. En algunas situaciones los modelos mas basicos pueden ser los mas adecuados en terminos de prediccion. 
+
+- Los datos no varian mucho con respecto al modelo de arboles de decision no obstante estamos usando pocos arboles para el random forest. Por defecto, mytr calcula el numero de arboles aleatorios igual a la raiz del numero de observaciones.
+
+## Que modelo predice mejor?
+
+```{r}
+CrossTable(nb_test_pred, default_test_labels, prop.chisq=FALSE, 
+prop.r=FALSE, prop.c=FALSE, dnn=c('predicted', 'actual'))
+```
+
+
+```{r}
+CrossTable(default_test_labels, dt_pred, prop.chisq=FALSE, prop.c=FALSE, prop.r=FALSE, dnn=c("default real", 'default pronosticado'))
+```
+
+```{r}
+CrossTable(default_test_labels, rf_pred, prop.chisq=FALSE, prop.c=FALSE, prop.r=FALSE, dnn=c("real", 'pronostico'))
+```

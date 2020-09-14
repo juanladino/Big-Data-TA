@@ -1,0 +1,295 @@
+---
+title: "TextAnalysis - 2"
+author: "Juan Felipe Ladino"
+date: "31 de marzo de 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Analisis de textos - 2
+
+### Twitter
+
+- El dia de hoy aprenderemos a extraer datos de Twitter. Ademas de extraer la informacion interna de la red social, utilizaremos analisis de textos para ir mas alla y encontrar informacion adicional.
+
+- Twitter es una plataforma que aloja mucha informacion, de hecho, muchos estudios politicos, sociales y economicos la utilizan como fuente.
+
+- Un ejemplo es Gallego et al (2019), que usaron informacion de twitter y machine learning para realizar un analisis de sentimiento relacionado con el acuerdo de paz.
+
+- Por otro lado, tanto para entidades publicas, como para empresas privadas, twitter es una herramienta que contiene opiniones de la ciudadania sobre sus servicios. Esta informacion puede ser explotada para generar mejoras
+
+- Lo primero para extraer información de twitter es tener una cuenta. Así que si no la tienen, regístrense y creen su cuenta.
+
+- Recuerden que previamente para extraer información de la web, explotabamos la forma en la que estaba ordenado el codigo fuente. Por medio de este podiamos localizar y extraer la informacion que desearamos
+
+- Aunque en Twitter se puede hacer eso, su estructura lo hace considerablemente mas dificil (bastante mas dificil) de manera que el tradicional web scrapping en principio no es una opcion
+
+- Twitter sin embargo tiene herramientas para desarrolladores o API, en las cuales con el permiso adecuado, la plataforma permite y facilita la extraccion de informacion (por esto necesitan tener cuenta de twitter)
+
+- Entren a la siguiente pagina: https://developer.twitter.com/
+
+- Esta es la pagina que contiene la informacion para desarrolladores de twitter. El trabajo sera aplicar para twitter permita que con nuestrs cuentas podamos acceder a la informacion
+
+- En la parte de arriba a la izquierda, pulsen `apply`, luego la opcion `apply for a developer account`. Tras esto, lesp reguntara `What is your primary reason for using Twitter developer tools?`. Seleccionen en ka columna `academic`, la opcion `student`. Pulsen `next`, llenen el formulario y nuevamente pulsen `next`.
+
+- Twitter les pedira que describan en ingles la razon para usar las herramientas. Escriban (en ingles) que lo requieren para desarrollar trabajos de la universidad del rosario, para la materia big data (y asi la informacion que puedan)
+
+- En principio pueden negarles el permiso, no obstante es poco probable, asi que asegurense que twitter entienda que es con fines de aprendizaje
+
+- Llenen todas las preguntas que twitter solicita, menos la ultima. `Will your product, service or analysis make Twitter content or derived information available to a government entity?`. Pongan a esta pregunta la opcion de no.
+
+- Terminen el proceso y sigan las instrucciones. Tras confirmar su cuenta en el correo. Podrán empezar a usar la API de twitter
+
+- El paso siguiente es busca la opción `create an app`y llenen los datos que les solicitan. Donde les solicitan URL, pongan la URL de su perfil de twitter. Llenen solamente los espacios `required`
+
+- Cuando terminen, vayan a la pestaña `keys and tokens`
+
+- Tendrán la siguiente información
+
+`API key`
+`API secret`
+
+- Y si pulsan en `generate`
+
+`Access token`
+`Access token secret`
+
+- Guarden todos estos datos, porque estos 4 codigos les permitiran usar la API
+
+- Ahora si entraremos a extraer informacion
+
+- Usemos los siguientes paquetes
+
+```{r}
+#install.packages("ROAuth")
+library(ROAuth)
+#install.packages("streamR")
+library(streamR)
+#install.packages("twitteR")
+library(twitteR)
+#install.packages("rtweet")
+library(rtweet)
+```
+
+- Creen variables que tengan cada uno de sus codigos de seguridad. 
+
+```{r}
+app_name <- "juanfe"
+consumer_key <- "xxxxxxxxxxxxxxxxxxxx" #api key
+consumer_secret <- "xxxxxxxxxxxxxxxxxxxx" #api secret
+access_token <- "xxxxxxxxxxxxxxxxxxxx" 
+access_secret <- "xxxxxxxxxxxxxxxxxxxx"
+```
+
+- Usemos estas variables para acceder
+```{r}
+twitter_token <- create_token(app_name, consumer_key, consumer_secret, access_token, access_secret)
+```
+
+- Con esto ya estamos dentro, intentemos buscar algunos tweets
+```{r}
+tweets <- search_tweets(q = "covid19", n = 100)
+tweets <- data.frame(tweets)
+```
+
+- Noten que con la funcion `search_tweets`, buscamos tweets que incluyan el termino covid19, con n = 100 veces
+
+- El resultado es un dataframe con 90 variables, cada una de las cuales me da informacion sobre los tweets exportados
+
+- Usemos otras funciones, ignoremos de la base todos los retweets
+```{r}
+no_retweets <- search_tweets(q = "covid19", n = 100, include_rts = FALSE)
+no_retweets <- data.frame(no_retweets)
+```
+
+- Observemos los usuarios que estan posteando sobre el tema
+```{r}
+unique(no_retweets$screen_name)
+```
+
+```{r}
+unique(no_retweets$lang)
+```
+
+
+- Podemos usar otra funcion paar extraer solo los usuarios que esten posteando sobre covid19
+```{r}
+users <- search_users("covid19", n = 100)
+```
+
+- La funcion para buscar tweets varia con respecto a la de usuarios en que la funcion de busqueda de tweets toma los 100 ultimos tweets que registre.
+
+- Usando `users` exploremos de donde son los usarios
+```{r}
+length(unique(users$location))
+```
+
+```{r}
+unique(users$location)
+```
+
+```{r}
+library(dplyr)
+library(ggplot2)
+```
+
+```{r}
+users %>%
+  ggplot(aes(x = location)) +
+  geom_bar() + coord_flip() +
+      labs(x = "Conteo", y = "Ubicacion")
+```
+
+- Limpiemos un poco
+```{r}
+users %>%
+  count(location, sort = TRUE) %>% #variable nombre n
+  mutate(location = reorder(location, n)) %>%
+  top_n(3) %>%
+  ggplot(aes(x = location, y = n)) +
+  geom_col() +
+  coord_flip() +
+      labs(x = "Conteo", y = "Ubicacion")
+```
+
+- Noten que usar la funcion top_n() con valor a 3 nos arroja 4 resultados. Esto es porque Costa Rica y CDMX tienen el mismo valor. Si hubiera mas ubicaciones con el mismo valor, tambien las incluiria en la grafica
+
+- Ahora entremos a aplicar el analisis de texto para tweets
+
+- Exportemos 100 tweets que esten escritos en espa�ol
+```{r}
+covid <- search_tweets("covid19", n = 100, lang = "es", include_rts = FALSE)
+covid <- data.frame(covid)
+```
+
+- Quedemonos solamente con el usuario y el tweet
+```{r}
+covid1 <- covid[, c(4,5)]
+```
+
+- Convirtamos los textos de los tweets en tokens y minusculas
+```{r}
+library(tidytext)
+```
+
+```{r}
+tokens <- covid1 %>%
+  unnest_tokens(token, text)
+```
+
+- Noten que la funcion `unnest_tokens` pone en minuscula los tokens
+
+- Limpiemos las stopwords
+```{r}
+library(stopwords)
+stop <- stopwords("es", source = "snowball")
+stop <- data.frame("stop" = stop)
+```
+
+```{r}
+tokens_ns <- tokens %>%
+  filter(!token %in% stop$stop)
+```
+
+- Limpiemos las palabras que tengan numeros
+```{r}
+library(stringr)
+```
+
+```{r}
+tokens_ns$nonum <- str_replace_all(tokens_ns$token, ".+[:digit:].+", "")
+```
+
+- Vamos por partes. `[:digit:]` es una expresion regular que se�ala los digitos. La expresion regular `.` me se�ala todo lo que sea un espacio, y la expresion `+` se refiere a una o mas veces hasta un espacio. 
+
+- En ese sentido, `.+[:digit:].+` se leeria del siguiente orden. Todo lo que haya antes de un numero, y todo lo que haya despues. Esta expresion me seleccionara los tokens de este estilo: "covid19", "hola1mundo", "usuario10hola"
+
+- No obstante, no seleccionara lo siguiente "covid1", "hola2", ya que despues del numero no hay nada mas. Tampoco seleccionara: "1", "2", "4", porque no hay nada antes o despues. Si revisamos la base, sigue con caracteres de este estilo
+
+```{r}
+tokens_ns$nonum1 <- str_replace_all(tokens_ns$nonum, "[:digit:].+", "") # "" != NA
+tokens_ns$nonum2 <- str_replace_all(tokens_ns$nonum1, ".+[:digit:]", "")
+tokens_ns$nonum3 <- str_replace_all(tokens_ns$nonum2, "[:digit:]", "")
+```
+
+- Esto puede generalizarse para que siempre que haya un numero la encuentre. Pero queda de tarea
+
+- Noten que reemplazamos esos tokens por un espacio vacio "" , de manera que eliminaremos esas filas
+```{r}
+tokens_ns <- tokens_ns %>%
+  filter(nonum3 != "")
+```
+
+```{r}
+tokens_ns <- tokens_ns[, c(1, 6)]
+```
+
+- Piensen que los tweets pueden incluir links a fotos y otras cosas. Eliminemos estos tokens. 
+
+- Piense en un link "hola.co". Noten que los podemos identificar por el punto
+
+```{r}
+tokens_ns$nonum4 <- str_replace_all(tokens_ns$nonum3, ".+\\..+", "")
+```
+
+- La expresion `.+` tiene el mismo sentido que antes. La pregunta esta en `\\.`
+
+- Al usar el doble `\\` estgamos diciendole a la expresion regular que el signo que le sigue, no corresponde a un caracter especial. Noten que el `.` por si mismo tiene un significado. Necesitamos que en vez de ese significado, la expresion entienda que es solamente un punto. Para esto nos sirve `\\`
+
+```{r}
+tokens_ns <- tokens_ns %>%
+  filter(nonum4 != "")
+```
+
+```{r}
+tokens_ns <- tokens_ns[, c(1, 3)]
+```
+
+- Las expresiones regulares pueden ser muy utiles, pero requieren practica. Despues las seguiremos estudiando. 
+
+- En el script anterior les deje unos links con todas las expresiones que hay. No les recomiendo aprenderselas porque solo algunas les seran de utilidad, pero tenganlas a la mano
+
+- Ademas, aqui les dejo un link donde pueden probar sus expresiones antes de incluirlas en R. 
+
+- Terminemos con un par de temas m�s
+
+- Para un analisis de texto, vale la pena empezar con una nube de palabras (no dan mucha informacion numerica, pero llaman la atencion para presentaciones)
+
+- Usemos el paquete `quanteda`
+```{r}
+#install.packages("quanteda")
+library(quanteda)
+```
+
+
+```{r}
+cloud <- dfm(tokens_ns$nonum4) #convertimos la columna de los tokens a objeto dfm
+
+textplot_wordcloud(cloud)
+```
+
+- Noten que a primera vista, es necesario hacer m�s limpieza. Nos gustaria eliminar ese "https" y algunas letras como "x" o "s" que aparecen por ahi
+
+- Hagamos una grafica mas
+```{r}
+tokens_ns %>%
+  group_by(nonum4) %>% #agrupamos por token
+  count(nonum4) %>% #crea variable n con numero de veces que se repite token
+  summarise(count = sum(n)) %>% #crea una variable que suma todas las n de los tokens repetidos
+  top_n(20, count) %>%#toma el top 10 de tokens
+  mutate(word = reorder(nonum4, count)) %>% #ordena de mayor a menor por token y conteo
+  ggplot(aes(word, count, fill = "red")) +
+  geom_col(show.legend = FALSE) + 
+  labs(x = NULL, y = "Frecuencia") +
+  coord_flip() +
+  theme_grey(base_size = 20)
+```
+
+- Fijen que esta grafica muestra que se requiere hacer mas limpieza, pero eso lo dejamos para despues
+
+- De momento ya sabemos extraer informacion de twitter y hacer analisis de texto para esta informacion
+
+- https://spannbaueradam.shinyapps.io/r_regex_tester/

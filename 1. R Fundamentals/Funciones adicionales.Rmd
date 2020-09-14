@@ -1,0 +1,221 @@
+---
+title: "Complemento - Fundamentos de R"
+author: "Juan Felipe Ladino"
+date: "28 de enero de 2020"
+output: html_document
+---
+
+## Trabajando con datos en R
+
+- Uno de los mayores desafíos de cualquier proyecto es trabajar con los datos.
+
+- Obtenerlos, prepararlos y usarlos, sobre todo porque vienen de diferentes fuentes.
+
+- Estaremos lidiando con esto a lo largo de todo el curso.
+
+- Pero veremos a continuación algunas funciones básicas.
+
+- No olvidemos que se debe establecer el directorio de trabajo al empezar a trabajar en R. En este directorio podrán leerse y guardarse todos los datos que requiramos para un proyecto en específico. 
+
+- Para definir directorio de trabajo: `Session -> Set Working Directory -> Choose Directory`
+
+### Guardando, cargando y removiendo estructuras de datos
+
+- La función `save()` nos permite guardar una estructura de datos, para poder cargarla despues.
+
+- La función guarda la estructura (sean vectores, matrices, listas, data frames, etc.) en la ubicación especificada por el parametro `file`. 
+
+- La extensión usada para los archivos de datos es `.RData`.
+
+- Recuerden de la clase pasada:
+
+```{r}
+nombre_sujeto <- c("James", "Radamel", "David")
+numero_goles <- c(109, 249, 0)
+juega_francia <- c(FALSE, TRUE, FALSE)
+posicion <- factor(c("volante", "delantero", "arquero"))
+gravedad_lesion <- factor(c("severa", "moderada", "leve"), levels = c("leve", "moderada", "severa"), ordered=TRUE)
+
+jugadores_seleccion <- data.frame(nombre_sujeto, numero_goles, posicion, juega_francia, gravedad_lesion, stringsAsFactors=FALSE)
+```
+
+- Podemos guardar las estructuras en un archivo llamado `mydata.Rdata`. Probemos con algunos de los objetos que ya tenemos:
+
+```{r}
+save(nombre_sujeto, numero_goles, juega_francia, posicion, gravedad_lesion, file="mydata.RData")
+save(jugadores_seleccion, file = "maindata.RData")
+```
+
+- Y podemos revisar en nuestra carpeta seleccionada como directorio de trabajo que en efecto ahora tenemos el archivo `mydata.RData`.
+
+- Todos los objetos que creemos quedan guardados en la memoria de R hasta que decidamos removerlos.
+
+- Por cuestiones de memoria (o de orden), quisiéramos remover algunas de estas estructuras.Lo podemos hacer con la función `rm()`:
+
+```{r}
+rm(nombre_sujeto, numero_goles, juega_francia, posicion, gravedad_lesion)
+```
+
+- Dado que ya tenemos un DataFrame con toda la información de cada lista, podríamos eliminarlas. 
+
+- Si creemos que podemos necesitarlas después podemos guardarlas tal como lo hicimos con el archivo `mydata.RData`.
+
+- Si tenemos abierta una sesión de R, y queremos cargar una estructura de datos que hayamos guardado, usamos la función `load()`.
+
+```{r}
+load("mydata.RData")
+```
+
+- Luego de trabajar en una sesión, suelen acumularse muchos objetos.
+
+- La función `ls()` regresa un vector con todas las estructuras de datos actualmente en la memoria:
+
+```{r}
+ls()
+```
+
+- Podemos removerlos todos:
+
+```{r}
+rm(list = ls())
+```
+
+
+### Trabajando con archivos CSV
+
+- Muchas bases de datos están en formato de texto. Esto tiene muchas ventajas.
+
+- Se pueden leer en cualquier sistema operativo y se exportan fácilmente a otros formatos.
+
+- Suelen usarse los **tabulars**, que son archivos de datos en forma de matriz. 
+
+- Cada línea de texto refleja un ejemplo, y cada ejemplo tiene el mismo nÃºmero de caracteristicas.
+
+- En una fila las características son separadas por medio de un símbolo, llamado delimitador.
+
+- Comunmente la primera fila del archivo se usa para escribir los nombres de las columnas. Esta fila es el **encabezado**.
+
+- El archivo de texto tabular más común es el CSV (Comma-Separated Values).
+
+- El delimitador es una coma.
+
+- Veamos un ejemplo de cómo importar a R un CSV. En la carpeta tenemos un archivo llamado `usedcars.csv`.
+
+```{r}
+usedcars <- read.csv("usedcars.csv", stringsAsFactors=FALSE)
+```
+
+- Esta base contiene datos de carros usados a la venta en USA de una popular página web.
+
+- Podemos ver que los datos han sido cargados. Removamos el objeto
+
+```{r}
+rm(usedcars)
+```
+
+- Por default, R asume que el CSV viene con un header. Si no es asá, podemos usa el parámetro `header=FALSE`
+
+```{r}
+usedcars <- read.csv("usedcars.csv", stringsAsFactors=FALSE, header=FALSE)
+```
+
+```{r}
+rm(usedcars)
+```
+
+- La función `read.csv` es un caso especial de la función `read.table()`. 
+
+- Esta nos sirve para leer archivos en muchos otros formatos.
+
+- Por ejemplo, en `.dta`.
+
+- Mas adelante trabajaremos más sobre esto.
+
+- A su vez, es posible escribir un data frame en CSV, por medio de la función `write.csv()`. 
+
+- Por ejemplo, guardemos en CSV nuestro data frame `jugadores_seleccion`:
+
+```{r}
+load("maindata.RData")
+write.csv(jugadores_seleccion, file="jugadores_seleccion.csv", row.names=FALSE)
+```
+
+- Y en efecto podemos verificar que el archivo ha sido creado en la carpeta.
+
+### Explorando y analizando los datos
+
+- Tras recopilar y cargar los datos en R, el siguiente paso es analizarlos y entenderlos.
+
+- Este paso es clave: cuÃ¡nto mÃ¡s entendamos nuestros datos, mejor sabremos elegir el algoritmo a utilizar.
+
+- Usaremos nuevamente la base de datos de carros usados
+
+```{r}
+usedcars <- read.csv("usedcars.csv", stringsAsFactors=FALSE)
+```
+
+- Exploremos y entendamos estos datos.
+
+- Primero, entendamos la estructura de los datos. Esto con la función `str()`:
+
+```{r}
+str(usedcars)
+```
+
+- Vemos que tenemos 150 observaciones y 6 variables.
+
+- `year`, es una variable de números enteros.
+
+- `model` es una variable de texto.
+
+- `price` es de nÃºmeros enteros.
+
+- `mileage` también de enteros.
+
+- `color` de texto.
+
+- `transmisson` también de texto
+
+- Existen diferentes herramientas para describir las variables numéricas. 
+
+- La función `summary()` nos da estadítica descriptiva.
+
+```{r}
+summary(usedcars$price)
+```
+
+- También podemos obtener estadística descriptiva de varias variables:
+
+```{r}
+summary(usedcars[c("year", "mileage")])
+```
+
+
+- Directamente podemos preguntar por otras medidas descriptivas para las variables. Por ejemplo:
+
+```{r}
+mean(usedcars$price)
+```
+
+```{r}
+range(usedcars$price)
+```
+
+```{r}
+quantile(usedcars$price)
+```
+
+```{r}
+IQR(usedcars$price)
+```
+
+```{r}
+var(usedcars$price)
+```
+
+
+```{r}
+sd(usedcars$price)
+```
+
+- Y así sucesivamente.
